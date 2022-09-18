@@ -64,16 +64,16 @@ var listOfBigDickEmoji = [...]string{
 }
 
 var listAverage = [...]string{
-	"Усреднённые младшие ваши ",
-	"Усреднённые члены ",
-	"Усреднённые стручки ",
-	"Усреднённые волшебные палочки ",
-	"Усреднённые козыри в рукаве ",
-	"Усреднённые чупачупсы ",
-	"Усреднённые песисы ",
-	"Усреднённые болты ",
-	"Усреднённые хоботки ",
-	"Усреднённые лысые Джонни Синсы ",
+	"<i>Усреднённые младшие ваши</i>\n\n ",
+	"<i>Усреднённые члены</i>\n\n ",
+	"<i>Усреднённые стручки</i>\n\n ",
+	"<i>Усреднённые волшебные палочки</i>\n\n ",
+	"<i>Усреднённые козыри в рукаве</i>\n\n ",
+	"<i>Усреднённые чупачупсы</i>\n\n ",
+	"<i>Усреднённые песисы</i>\n\n ",
+	"<i>Усреднённые болты</i>\n\n ",
+	"<i>Усреднённые хоботки</i>\n\n ",
+	"<i>Усреднённые лысые Джонни Синсы</i>\n\n ",
 }
 
 func GetRandMeasureReplyPattern(dickSize int) string {
@@ -86,4 +86,9 @@ func GetRandMeasureReplyPattern(dickSize int) string {
 	}
 
 	return res
+}
+
+func GetRandAverageRepltText() string {
+	rand.Seed(time.Now().UnixNano())
+	return listAverage[rand.Intn(len(listAverage))]
 }

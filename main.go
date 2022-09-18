@@ -1,6 +1,7 @@
 package main
 
 import (
+	. "DickSizeBot/logger"
 	"DickSizeBot/postgres"
 	"DickSizeBot/postgres/models/dick_size/db"
 	"DickSizeBot/utils"
@@ -25,7 +26,14 @@ var numericKeyboard = tgbotapi.NewReplyKeyboard(
 )
 
 func main() {
-	bot, err := tgbotapi.NewBotAPI("5445796005:AAHQLY5pFGMOZ_uVbEzel0tK0dRReIVC7bw")
+	LoggerInit("trace", "log/bot-log.log", true)
+	err := tgbotapi.SetLogger(Log)
+	if err != nil {
+		return
+	}
+
+	bot, err := tgbotapi.NewBotAPI("5445796005:AAHQLY5pFGMOZ_uVbEzel0tK0dRReIVC7bw") //main bot
+	//	bot, err := tgbotapi.NewBotAPI("5681105337:AAHNnD0p6XcXo7biy9U7F7P-ctSkk-TrWGA") //test bot
 	if err != nil {
 		log.Panic(err)
 	}
@@ -44,14 +52,14 @@ func main() {
 
 	client, err := postgres.NewClient(ctx, 2, user, pass, host, "5432", database)
 	if err != nil {
-		log.Printf(err.Error())
+		Log.Println(err.Error())
 	}
 
 	repo := db.NewRepo(client)
 
 	bot.Debug = true
 
-	log.Printf("Authorized on account %s", bot.Self.UserName)
+	Log.Printf("Authorized on account %s", bot.Self.UserName)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
@@ -64,7 +72,7 @@ func main() {
 			if time.Now().Weekday().String() == "Monday" {
 				if time.Now().Hour() == 20 && time.Now().Minute() == 57 {
 					repo.DeleteSizesByTime(ctx)
-					log.Printf("Database was cleared at: %v", time.Now())
+					Log.Printf("Database was cleared at: %v", time.Now())
 				}
 			}
 		}()
@@ -89,10 +97,11 @@ func main() {
 
 						_, err := repo.InsertSize(ctx, update.Message.From.ID, update.Message.From.FirstName, update.Message.From.LastName, update.Message.From.UserName, dickSize, update.Message.Chat.ID, update.Message.Chat.IsGroup())
 						if err != nil {
-							log.Printf(err.Error())
+							Log.Printf(err.Error())
 						}
 
 						msg = tgbotapi.NewMessage(update.Message.Chat.ID, GetRandMeasureReplyPattern(dickSize))
+
 						msg.ReplyMarkup = numericKeyboard
 						msg.ReplyToMessageID = update.Message.MessageID
 					}
@@ -100,7 +109,8 @@ func main() {
 					if update.Message.Chat.IsGroup() {
 						chatAverages, _ := repo.GetUserAllSizesByChatId(ctx, update.Message.Chat.ID)
 
-						msgText := "<i>Средняя длинна пипинусов</i>\n\n"
+						//msgText := "<i>Средняя длинна пипинусов</i>\n\n"
+						msgText := GetRandAverageRepltText()
 
 						for _, userData := range chatAverages {
 							if fname, ok := userData["fname"]; ok {
@@ -142,7 +152,7 @@ func main() {
 				}
 				_, err := bot.Send(msg)
 				if err != nil {
-					err.Error()
+					Log.Printf(err.Error())
 				}
 
 			} else if update.InlineQuery != nil {
@@ -165,14 +175,14 @@ func main() {
 						}
 
 						if _, err := bot.Request(inlineConf); err != nil {
-							log.Println(err)
+							Log.Println(err)
 						}
 					} else {
 						dickSize := utils.GenerateDickSize()
 
 						_, err := repo.InsertSize(ctx, update.InlineQuery.From.ID, update.InlineQuery.From.FirstName, update.InlineQuery.From.LastName, update.InlineQuery.From.UserName, dickSize, 0, false)
 						if err != nil {
-							log.Printf(err.Error())
+							Log.Printf(err.Error())
 						}
 
 						replyText := GetRandMeasureReplyPattern(dickSize)
@@ -203,14 +213,14 @@ func main() {
 
 						err = params.AddInterface("results", resulVar)
 						if err != nil {
-							log.Println(err)
+							Log.Println(err)
 						}
 
 						_, err = bot.MakeRequest("answerInlineQuery", params)
 						//					_, err = bot.Request(inlineConf)
 
 						if err != nil {
-							log.Println(err)
+							Log.Println(err)
 						}
 					}
 
