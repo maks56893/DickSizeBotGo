@@ -13,6 +13,7 @@ import (
 )
 
 const CommandToBot = "@FatBigDickBot"
+const CommandToTestingBot = "@TestingDickSizeBot"
 
 const MeasureCommand = "/check_size"
 const AverageCommangd = "/get_average"
@@ -32,8 +33,8 @@ func main() {
 		return
 	}
 
-	bot, err := tgbotapi.NewBotAPI("5445796005:AAHQLY5pFGMOZ_uVbEzel0tK0dRReIVC7bw") //main bot
-	//	bot, err := tgbotapi.NewBotAPI("5681105337:AAHNnD0p6XcXo7biy9U7F7P-ctSkk-TrWGA") //test bot
+	//	bot, err := tgbotapi.NewBotAPI("5445796005:AAHQLY5pFGMOZ_uVbEzel0tK0dRReIVC7bw") //main bot
+	bot, err := tgbotapi.NewBotAPI("5681105337:AAHNnD0p6XcXo7biy9U7F7P-ctSkk-TrWGA") //test bot
 	if err != nil {
 		log.Panic(err)
 	}
@@ -84,7 +85,7 @@ func main() {
 			if update.Message != nil { // If we got a message
 
 				switch update.Message.Text {
-				case MeasureCommand, MeasureCommand + CommandToBot:
+				case MeasureCommand, MeasureCommand + CommandToBot, MeasureCommand + CommandToTestingBot:
 
 					if utils.CheckLastMeasureDateIsToday(ctx, repo, update.Message.From.ID, update.Message.Chat.ID) {
 						dickModel, _ := repo.GetLastMeasureByUserInThisChat(ctx, update.Message.From.ID, update.Message.Chat.ID)
@@ -105,7 +106,7 @@ func main() {
 						//						msg.ReplyMarkup = numericKeyboard
 						msg.ReplyToMessageID = update.Message.MessageID
 					}
-				case AverageCommangd, AverageCommangd + CommandToBot:
+				case AverageCommangd, AverageCommangd + CommandToBot, AverageCommangd + CommandToTestingBot:
 					if update.Message.Chat.IsGroup() {
 						chatAverages, _ := repo.GetUserAllSizesByChatId(ctx, update.Message.Chat.ID)
 
@@ -117,7 +118,7 @@ func main() {
 								msgText += fname
 								msgText += " "
 							}
-							if username, ok := userData["username"]; ok {
+							if username, ok := userData["username"]; ok && userData["username"] != "" {
 								msgText += "@"
 								msgText += username
 								msgText += " "
