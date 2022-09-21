@@ -17,13 +17,13 @@ const CommandToBot = "@FatBigDickBot"
 const MeasureCommand = "/check_size"
 const AverageCommangd = "/get_average"
 
-var numericKeyboard = tgbotapi.NewReplyKeyboard(
-	tgbotapi.NewKeyboardButtonRow(
-		tgbotapi.NewKeyboardButton(MeasureCommand),
-		tgbotapi.NewKeyboardButton(AverageCommangd),
-		//		tgbotapi.NewKeyboardButton("3"),
-	),
-)
+//var numericKeyboard = tgbotapi.NewReplyKeyboard(
+//	tgbotapi.NewKeyboardButtonRow(
+//		tgbotapi.NewKeyboardButton(MeasureCommand),
+//		tgbotapi.NewKeyboardButton(AverageCommangd),
+//		//		tgbotapi.NewKeyboardButton("3"),
+//	),
+//)
 
 func main() {
 	LoggerInit("trace", "log/bot-log.log", true)
@@ -90,7 +90,7 @@ func main() {
 						dickModel, _ := repo.GetLastMeasureByUserInThisChat(ctx, update.Message.From.ID, update.Message.Chat.ID)
 
 						msg = tgbotapi.NewMessage(update.Message.Chat.ID, GetRandMeasureReplyPattern(int(dickModel.Dick_size)))
-						msg.ReplyMarkup = numericKeyboard
+						//						msg.ReplyMarkup = numericKeyboard
 						msg.ReplyToMessageID = update.Message.MessageID
 					} else {
 						dickSize := utils.GenerateDickSize()
@@ -102,14 +102,13 @@ func main() {
 
 						msg = tgbotapi.NewMessage(update.Message.Chat.ID, GetRandMeasureReplyPattern(dickSize))
 
-						msg.ReplyMarkup = numericKeyboard
+						//						msg.ReplyMarkup = numericKeyboard
 						msg.ReplyToMessageID = update.Message.MessageID
 					}
 				case AverageCommangd, AverageCommangd + CommandToBot:
 					if update.Message.Chat.IsGroup() {
 						chatAverages, _ := repo.GetUserAllSizesByChatId(ctx, update.Message.Chat.ID)
 
-						//msgText := "<i>Средняя длинна пипинусов</i>\n\n"
 						msgText := GetRandAverageRepltText()
 
 						for _, userData := range chatAverages {
@@ -135,15 +134,14 @@ func main() {
 						}
 
 						msg = tgbotapi.NewMessage(update.Message.Chat.ID, msgText)
-						msg.ReplyMarkup = numericKeyboard
+						//						msg.ReplyMarkup = numericKeyboard
 						msg.ParseMode = "HTML"
-
 						msg.ReplyToMessageID = update.Message.MessageID
 
 						fmt.Println(msgText)
 					} else {
 						msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Используй в группе")
-						msg.ReplyMarkup = numericKeyboard
+						//						msg.ReplyMarkup = numericKeyboard
 						msg.ParseMode = "HTML"
 
 						msg.ReplyToMessageID = update.Message.MessageID
@@ -162,7 +160,6 @@ func main() {
 					if utils.CheckLastMeasureDateIsToday(ctx, repo, update.Message.From.ID, update.Message.Chat.ID) {
 						dickModel, _ := repo.GetLastMeasureByUserInThisChat(ctx, update.Message.From.ID, update.Message.Chat.ID)
 
-						//					replyText := "Длина пипинуса " + strconv.Itoa(int(dickModel.Dick_size)) + "см"
 						replyText := GetRandMeasureReplyPattern(int(dickModel.Dick_size))
 
 						article := tgbotapi.NewInlineQueryResultArticle(update.InlineQuery.ID, "Узнай свой размер", replyText)
