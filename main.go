@@ -25,6 +25,7 @@ const AverageCommangd = "/get_average"
 //		//		tgbotapi.NewKeyboardButton("3"),
 //	),
 //)
+var removeKeyboard = tgbotapi.NewRemoveKeyboard(true)
 
 func main() {
 	LoggerInit("trace", "log/bot-log.log", true)
@@ -33,8 +34,8 @@ func main() {
 		return
 	}
 
-	bot, err := tgbotapi.NewBotAPI("5445796005:AAHQLY5pFGMOZ_uVbEzel0tK0dRReIVC7bw") //main bot
-	//	bot, err := tgbotapi.NewBotAPI("5681105337:AAHNnD0p6XcXo7biy9U7F7P-ctSkk-TrWGA") //test bot
+	//	bot, err := tgbotapi.NewBotAPI("5445796005:AAHQLY5pFGMOZ_uVbEzel0tK0dRReIVC7bw") //main bot
+	bot, err := tgbotapi.NewBotAPI("5681105337:AAHNnD0p6XcXo7biy9U7F7P-ctSkk-TrWGA") //test bot
 	if err != nil {
 		log.Panic(err)
 	}
@@ -91,7 +92,7 @@ func main() {
 						dickModel, _ := repo.GetLastMeasureByUserInThisChat(ctx, update.Message.From.ID, update.Message.Chat.ID)
 
 						msg = tgbotapi.NewMessage(update.Message.Chat.ID, GetRandMeasureReplyPattern(int(dickModel.Dick_size)))
-						//						msg.ReplyMarkup = numericKeyboard
+						msg.ReplyMarkup = removeKeyboard
 						msg.ReplyToMessageID = update.Message.MessageID
 					} else {
 						dickSize := utils.GenerateDickSize()
@@ -103,7 +104,7 @@ func main() {
 
 						msg = tgbotapi.NewMessage(update.Message.Chat.ID, GetRandMeasureReplyPattern(dickSize))
 
-						//						msg.ReplyMarkup = numericKeyboard
+						msg.ReplyMarkup = removeKeyboard
 						msg.ReplyToMessageID = update.Message.MessageID
 					}
 				case AverageCommangd, AverageCommangd + CommandToBot, AverageCommangd + CommandToTestingBot:
@@ -135,14 +136,14 @@ func main() {
 						}
 
 						msg = tgbotapi.NewMessage(update.Message.Chat.ID, msgText)
-						//						msg.ReplyMarkup = numericKeyboard
+						msg.ReplyMarkup = removeKeyboard
 						msg.ParseMode = "HTML"
 						msg.ReplyToMessageID = update.Message.MessageID
 
 						fmt.Println(msgText)
 					} else {
 						msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Используй в группе")
-						//						msg.ReplyMarkup = numericKeyboard
+						msg.ReplyMarkup = removeKeyboard
 						msg.ParseMode = "HTML"
 
 						msg.ReplyToMessageID = update.Message.MessageID
