@@ -32,3 +32,13 @@ func CheckLastMeasureDateIsToday(ctx context.Context, repo models.Repository, us
 		return false
 	}
 }
+
+func CheckIsTodayMeasure(measure models.DickSize) bool {
+	today := time.Now()
+
+	if measure.Measure_date.Year() == today.Year() && measure.Measure_date.Month() == today.Month() && measure.Measure_date.Day() == today.Day() {
+		return true
+	} else {
+		return false
+	}
+}

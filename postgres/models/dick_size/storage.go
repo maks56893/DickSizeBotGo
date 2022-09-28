@@ -9,5 +9,6 @@ type Repository interface {
 	GetLastMeasureByUserInThisChat(ctx context.Context, user_id int64, chatId int64) (DickSize, error)
 	GetUserAllSizesByChatId(ctx context.Context, chatId int64) ([]map[string]string, error)
 	DeleteSizesByTime(ctx context.Context)
+	SelectOnlyTodaysMeasures(ctx context.Context, chatId int64) ([]DickSize, error)
 	//	CreateTableIfNotExists(ctx context.Context, chatId int64)
 }

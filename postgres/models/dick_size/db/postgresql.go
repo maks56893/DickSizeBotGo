@@ -1,62 +1,79 @@
 package db
 
 import (
+	. "DickSizeBot/logger"
 	"DickSizeBot/postgres"
 	models "DickSizeBot/postgres/models/dick_size"
 	"context"
 	"database/sql"
 	"errors"
-	"log"
 )
 
 type repo struct {
 	client postgres.Client
 }
 
+func (r *repo) SelectOnlyTodaysMeasures(ctx context.Context, chatId int64) ([]models.DickSize, error) {
+	//	todayDate := time.Now()
+
+	//	query := fmt.Sprintf("select * from postgres.public.dick_size ds where date(measure_date) = '%d-%d-%d' and chat_id = $1 order by dick_size desc ", todayDate.Year(), (todayDate.Month()), todayDate.Day())
+	query := `
+			select *
+			from postgres.public.dick_size ds
+			where measure_date in (select max(measure_date) as measure_date
+									from postgres.public.dick_size ds_in
+									where chat_id = $1
+									group by user_id , fname , lname , username)
+			order by measure_date desc`
+
+	Log.Debugf("SelectOnlyTodaysMeasures query: %s", query)
+
+	var dicks []models.DickSize
+
+	rows, err := r.client.Query(ctx, query, chatId)
+	if err != nil {
+		Log.Errorf("SQL error while exec SelectOnlyTodaysMeasures: %s", err.Error())
+	} else {
+		indx := 0
+		for rows.Next() {
+			dicks = append(dicks, models.DickSize{})
+			err := rows.Scan(&dicks[indx].Id,
+				&dicks[indx].UsedId,
+				&dicks[indx].Fname,
+				&dicks[indx].Lname,
+				&dicks[indx].Username,
+				&dicks[indx].Dick_size,
+				&dicks[indx].Measure_date,
+				&dicks[indx].Chat_id,
+				&dicks[indx].Is_group)
+			if err != nil {
+				//	return model, err
+				Log.Errorf("Failed to parse row: %d", indx+1)
+			}
+			indx++
+		}
+	}
+	return dicks, nil
+}
+
 func (r *repo) DeleteSizesByTime(ctx context.Context) {
 	query := `delete from dick_size`
 
-	log.Printf("DeleteSizesByTime query: %s", query)
+	Log.Debugf("DeleteSizesByTime query: %s", query)
 
 	var count int
 
 	err := r.client.QueryRow(ctx, query).Scan(&count)
 	if err != nil {
-		log.Println(err.Error())
+		Log.Debugf(err.Error())
 	}
 }
-
-//func (r *repo) CreateTableIfNotExists(ctx context.Context, chatId int64) {
-//	query := `create table if not exists dick_size_$1 (
-//	id SERIAL  PRIMARY KEY,
-//	user_id INT NOT NULL,
-//	fname VARCHAR(50),
-//	lname VARCHAR(50),
-//	username VARCHAR(50),
-//	dick_size BIGINT,
-//	measure_date TIMESTAMP,
-//	chat_id BIGINT,
-//	is_group BOOL
-//)`
-//
-//	log.Printf("InsertSize func, query %s", query)
-//
-//	var success interface{}
-//
-//	err := r.client.QueryRow(ctx, query, chatId).Scan(&success)
-//	if err != nil {
-//		log.Println(err)
-//		if success == nil || success == "" {
-//			log.Println("Table already presents!")
-//		}
-//	}
-//}
 
 func (r *repo) InsertSize(ctx context.Context, user_id int64, fname, lname, username string, dick_size int, chat_id int64, is_group bool) (int, error) {
 	query := `insert into public.dick_size (user_id, fname, lname, username, dick_size, measure_date, chat_id, is_group)
 			values ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, $6, $7)
 			returning id`
-	log.Printf("InsertSize func, query %s", query)
+	Log.Debugf("InsertSize func, query %s", query)
 
 	var id int
 	err := r.client.QueryRow(ctx, query, user_id, fname, lname, username, dick_size, chat_id, is_group).Scan(&id)
@@ -78,7 +95,7 @@ func (r *repo) GetLastMeasureByUserInThisChat(ctx context.Context, user_id int64
 				order by measure_date desc 
 				limit 1`
 
-	log.Printf("GetLastMeasureByUserInThisChat func, query %s", query)
+	Log.Debugf("GetLastMeasureByUserInThisChat func, query %s", query)
 
 	model := models.DickSize{}
 
@@ -106,7 +123,7 @@ func (r *repo) GetUserAllSizesByChatId(ctx context.Context, chatId int64) ([]map
 
 	var result []map[string]string
 
-	log.Printf("select avg(dick_size) as \"average\", fname, lname , username \n\t\t\t\tfrom public.dick_size ds \n\t\t\t\twhere chat_id = %v\n\t\t\t\tgroup by fname, lname, username \n\t\t\t\torder by \"average\" DESC", chatId)
+	Log.Debugf("select avg(dick_size) as \"average\", fname, lname , username \n\t\t\t\tfrom public.dick_size ds \n\t\t\t\twhere chat_id = %v\n\t\t\t\tgroup by fname, lname, username \n\t\t\t\torder by \"average\" DESC", chatId)
 
 	rows, err := r.client.Query(ctx, query, chatId)
 	if err != nil {

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
+	"strconv"
 	"time"
 )
 
@@ -17,6 +18,7 @@ const CommandToTestingBot = "@TestingDickSizeBot"
 
 const MeasureCommand = "/check_size"
 const AverageCommangd = "/get_average"
+const TodayCommand = "/today_measures"
 
 //var numericKeyboard = tgbotapi.NewReplyKeyboard(
 //	tgbotapi.NewKeyboardButtonRow(
@@ -140,7 +142,6 @@ func main() {
 						msg.ParseMode = "HTML"
 						msg.ReplyToMessageID = update.Message.MessageID
 
-						fmt.Println(msgText)
 					} else {
 						msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Используй в группе")
 						msg.ReplyMarkup = removeKeyboard
@@ -148,7 +149,46 @@ func main() {
 
 						msg.ReplyToMessageID = update.Message.MessageID
 					}
+				case TodayCommand, TodayCommand + CommandToBot, TodayCommand + CommandToTestingBot:
+					if update.Message.Chat.IsGroup() {
+						todayMeasures, err := repo.SelectOnlyTodaysMeasures(ctx, update.Message.Chat.ID)
+						if todayMeasures != nil {
+							Log.Errorf("Error while getting today measures: %s", err)
 
+							msgText := GetRandTodayReplyText()
+
+							for _, measure := range todayMeasures {
+								if utils.CheckIsTodayMeasure(measure) {
+									msgText += "✅ "
+								} else {
+									msgText += "❗ "
+								}
+								if measure.Fname != "" {
+									msgText += measure.Fname + " "
+								}
+								if measure.Username != "" {
+									msgText += "@" + measure.Username + " "
+								}
+								if measure.Lname != "" {
+									msgText += measure.Lname + " "
+								}
+								if measure.Dick_size != 0 {
+									msgText += strconv.Itoa(int(measure.Dick_size)) + "см" + "\n"
+								}
+							}
+
+							msg = tgbotapi.NewMessage(update.Message.Chat.ID, msgText)
+							msg.ReplyMarkup = removeKeyboard
+							msg.ParseMode = "HTML"
+							msg.ReplyToMessageID = update.Message.MessageID
+						}
+					} else {
+						msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Используй в группе")
+						msg.ReplyMarkup = removeKeyboard
+						msg.ParseMode = "HTML"
+
+						msg.ReplyToMessageID = update.Message.MessageID
+					}
 				}
 				_, err := bot.Send(msg)
 				if err != nil {

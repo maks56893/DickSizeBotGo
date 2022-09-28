@@ -63,6 +63,19 @@ var listOfBigDickEmoji = [...]string{
 	//	"🚀",
 }
 
+var listOfTodayDicks = [...]string{
+	"члены",
+	"морковки",
+	"удавы",
+	"питоны",
+	"чупачупсы",
+	"стручки",
+	"волшебные палочки",
+	"пенисы",
+	"шишки",
+	"лысые Джонни Синсы",
+}
+
 var listAverage = [...]string{
 	"<i>Усреднённые младшие ваши</i>\n\n ",
 	"<i>Усреднённые члены</i>\n\n ",
@@ -91,4 +104,9 @@ func GetRandMeasureReplyPattern(dickSize int) string {
 func GetRandAverageRepltText() string {
 	rand.Seed(time.Now().UnixNano())
 	return listAverage[rand.Intn(len(listAverage))]
+}
+
+func GetRandTodayReplyText() string {
+	rand.Seed(time.Now().UnixNano())
+	return "<b>Свежие (и не очень ❗️)" + listOfTodayDicks[rand.Intn(len(listOfTodayDicks))] + "\n\n</b>"
 }
