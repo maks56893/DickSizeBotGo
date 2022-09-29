@@ -18,7 +18,7 @@ const CommandToTestingBot = "@TestingDickSizeBot"
 
 const MeasureCommand = "/check_size"
 const AverageCommangd = "/get_average"
-const TodayCommand = "/today_measures"
+const TodayCommand = "/last_measures"
 
 //var numericKeyboard = tgbotapi.NewReplyKeyboard(
 //	tgbotapi.NewKeyboardButtonRow(
