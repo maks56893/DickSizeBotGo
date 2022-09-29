@@ -178,7 +178,8 @@ func main() {
 								if !utils.CheckIsTodayMeasure(measure) {
 									measureDay := measure.Measure_date.Day()
 									measureMonth := int(measure.Measure_date.Month())
-									msgText += " <i>(отмерено " + strconv.Itoa(measureDay) + "." + strconv.Itoa(measureMonth) + ")</i>\n"
+									measureYear := measure.Measure_date.Year()
+									msgText += " <i>(отмерено " + strconv.Itoa(measureDay) + "." + strconv.Itoa(measureMonth) + "." + strconv.Itoa(measureYear%100/10) + strconv.Itoa(measureYear%10) + ")" + "</i>\n"
 								} else {
 									msgText += "\n"
 								}
