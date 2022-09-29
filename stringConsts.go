@@ -108,5 +108,5 @@ func GetRandAverageRepltText() string {
 
 func GetRandTodayReplyText() string {
 	rand.Seed(time.Now().UnixNano())
-	return "<b>Свежие (и не очень ❗️)" + listOfTodayDicks[rand.Intn(len(listOfTodayDicks))] + "\n\n</b>"
+	return "<b>Свежие (и не очень ❗️) " + listOfTodayDicks[rand.Intn(len(listOfTodayDicks))] + "\n\n</b>"
 }

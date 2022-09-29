@@ -36,8 +36,8 @@ func main() {
 		return
 	}
 
-	bot, err := tgbotapi.NewBotAPI("5445796005:AAHQLY5pFGMOZ_uVbEzel0tK0dRReIVC7bw") //main bot
-	//	bot, err := tgbotapi.NewBotAPI("5681105337:AAHNnD0p6XcXo7biy9U7F7P-ctSkk-TrWGA") //test bot
+	//	bot, err := tgbotapi.NewBotAPI("5445796005:AAHQLY5pFGMOZ_uVbEzel0tK0dRReIVC7bw") //main bot
+	bot, err := tgbotapi.NewBotAPI("5681105337:AAHNnD0p6XcXo7biy9U7F7P-ctSkk-TrWGA") //test bot
 	if err != nil {
 		log.Panic(err)
 	}
@@ -173,7 +173,14 @@ func main() {
 									msgText += measure.Lname + " "
 								}
 								if measure.Dick_size != 0 {
-									msgText += strconv.Itoa(int(measure.Dick_size)) + "см" + "\n"
+									msgText += strconv.Itoa(int(measure.Dick_size)) + "см"
+								}
+								if !utils.CheckIsTodayMeasure(measure) {
+									measureDay := measure.Measure_date.Day()
+									measureMonth := int(measure.Measure_date.Month())
+									msgText += " <i>(отмерено " + strconv.Itoa(measureMonth) + "." + strconv.Itoa(measureDay) + ")</i>\n"
+								} else {
+									msgText += "\n"
 								}
 							}
 

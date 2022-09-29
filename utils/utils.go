@@ -21,9 +21,9 @@ func CheckLastMeasureDateIsToday(ctx context.Context, repo models.Repository, us
 	}
 
 	date := dickAndDate.Measure_date
+	measureMidnight := time.Date(date.Year(), date.Month(), date.Day(), 23, 59, 59, 999, date.Location())
 	if date.Year() != 0001 {
-		dateDiff := int(time.Now().Sub(date) / time.Hour)
-		if dateDiff <= 24 {
+		if time.Now().Before(measureMidnight) {
 			return true
 		} else {
 			return false

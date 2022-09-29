@@ -24,7 +24,7 @@ func (r *repo) SelectOnlyTodaysMeasures(ctx context.Context, chatId int64) ([]mo
 									from postgres.public.dick_size ds_in
 									where chat_id = $1
 									group by user_id , fname , lname , username)
-			order by measure_date desc`
+			order by dick_size desc`
 
 	Log.Debugf("SelectOnlyTodaysMeasures query: %s", query)
 
