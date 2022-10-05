@@ -135,11 +135,11 @@ func (r *repo) InsertSize(ctx context.Context, user_id int64, fname, lname, user
 			username = excluded.username,
 			lname  = excluded.lname,
 			chat_id = excluded.chat_id
-	returning id;
+	returning user_id;
 `
 	var insertedId int
 
-	err := r.client.QueryRow(ctx, query, user_id, fname, username, lname /*, chat_id*/).Scan(&insertedId)
+	err := r.client.QueryRow(ctx, query, user_id, fname, username, lname).Scan(&insertedId)
 	if err != nil {
 		Log.Errorf("Error while exec CreateOrUpdateUser query: %v", err)
 
