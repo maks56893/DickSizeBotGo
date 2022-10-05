@@ -13,6 +13,63 @@ type repo struct {
 	client postgres.Client
 }
 
+func (r *repo) CreateOrUpdateUser(ctx context.Context, user_id int64, fname, lname, username string, chat_id int64) int {
+	query := `
+	insert into postgres.public.user_data (user_id, fname, username, lname) values 
+	($1, $2, $3, $4)
+	on conflict (user_id) do update 
+		set fname = excluded.fname,
+			username = excluded.username,
+			lname  = excluded.lname;
+`
+
+	Log.Debugf("Query: \n%s", query)
+	var insertedId int
+
+	err := r.client.QueryRow(ctx, query, user_id, fname, username, lname).Scan(&insertedId)
+	if err != nil {
+		Log.Errorf("Error while exec CreateOrUpdateUser query: %v", err)
+		return 0
+	}
+	return insertedId
+}
+
+// TODO изменить архитектуру бд: добавить отдельную таблицу с именами юзеров и брать их оттуда. Колонки: user_id, fname, username, lname, chat_id
+// TODO Перед каждым запросом проверять существование сначала id, потом всех данных, если id есть, а данные не совпадают, то удалить старые и добавить новые
+
+func (r *repo) GetAllCredentials(ctx context.Context, chatId int64) []models.UserCredentials {
+	query := `
+	select distinct user_id , fname , username , lname 
+	from postgres.public.dick_size ds 
+	where chat_id = $1
+	`
+
+	Log.Debugf("GetAllCredentials query: %s", query)
+
+	var usersData []models.UserCredentials
+
+	rows, err := r.client.Query(ctx, query, chatId)
+	if err != nil {
+		Log.Errorf("SQL error while exec SelectOnlyTodaysMeasures: %s", err.Error())
+	} else {
+		indx := 0
+		for rows.Next() {
+			usersData = append(usersData, models.UserCredentials{})
+			err := rows.Scan(
+				&usersData[indx].UserId,
+				&usersData[indx].Fname,
+				&usersData[indx].Username,
+				&usersData[indx].Lname,
+			)
+			if err != nil {
+				Log.Errorf("Failed to parse row: %d", indx+1)
+			}
+			indx++
+		}
+	}
+	return usersData
+}
+
 func (r *repo) SelectOnlyTodaysMeasures(ctx context.Context, chatId int64) ([]models.DickSize, error) {
 	//	todayDate := time.Now()
 
@@ -70,13 +127,31 @@ func (r *repo) DeleteSizesByTime(ctx context.Context) {
 }
 
 func (r *repo) InsertSize(ctx context.Context, user_id int64, fname, lname, username string, dick_size int, chat_id int64, is_group bool) (int, error) {
-	query := `insert into public.dick_size (user_id, fname, lname, username, dick_size, measure_date, chat_id, is_group)
-			values ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, $6, $7)
+	query := `
+	insert into postgres.public.user_data (user_id, fname, username, lname) values 
+	($1, $2, $3, $4)
+	on conflict (user_id) do update 
+		set fname = excluded.fname,
+			username = excluded.username,
+			lname  = excluded.lname,
+			chat_id = excluded.chat_id
+	returning id;
+`
+	var insertedId int
+
+	err := r.client.QueryRow(ctx, query, user_id, fname, username, lname /*, chat_id*/).Scan(&insertedId)
+	if err != nil {
+		Log.Errorf("Error while exec CreateOrUpdateUser query: %v", err)
+
+	}
+
+	query = `insert into public.dick_size (user_id, dick_size, measure_date, chat_id, is_group)
+			values ($1,  $2, CURRENT_TIMESTAMP, $3, $4)
 			returning id`
 	Log.Debugf("InsertSize func, query %s", query)
 
 	var id int
-	err := r.client.QueryRow(ctx, query, user_id, fname, lname, username, dick_size, chat_id, is_group).Scan(&id)
+	err = r.client.QueryRow(ctx, query, user_id, dick_size, chat_id, is_group).Scan(&id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return 0, sql.ErrNoRows
@@ -89,11 +164,14 @@ func (r *repo) InsertSize(ctx context.Context, user_id int64, fname, lname, user
 }
 
 func (r *repo) GetLastMeasureByUserInThisChat(ctx context.Context, user_id int64, chatId int64) (models.DickSize, error) {
-	query := `select dick_size, measure_date
-				from public.dick_size ds
-				where user_id = $1 and chat_id = $2
-				order by measure_date desc 
-				limit 1`
+	query := `
+	select ds.user_id , ud.fname , ud.username , ud.lname , ds.dick_size , ds.measure_date , ds.chat_id , ds.is_group 
+	from postgres.public.dick_size ds 
+	inner join postgres.public.user_data ud on ud.user_id = ds.user_id 
+	where ds.user_id = $1 and ds.chat_id = $2
+	order by ds.measure_date desc 
+	limit 1
+`
 
 	Log.Debugf("GetLastMeasureByUserInThisChat func, query %s", query)
 
@@ -104,7 +182,15 @@ func (r *repo) GetLastMeasureByUserInThisChat(ctx context.Context, user_id int64
 		return model, err
 	} else {
 		for rows.Next() {
-			err := rows.Scan(&model.Dick_size, &model.Measure_date)
+			err := rows.Scan(
+				&model.UsedId,
+				&model.Fname,
+				&model.Username,
+				&model.Lname,
+				&model.Dick_size,
+				&model.Measure_date,
+				&model.Chat_id,
+				&model.Is_group)
 			if err != nil {
 				return model, err
 			}
@@ -115,11 +201,19 @@ func (r *repo) GetLastMeasureByUserInThisChat(ctx context.Context, user_id int64
 }
 
 func (r *repo) GetUserAllSizesByChatId(ctx context.Context, chatId int64) ([]map[string]string, error) {
-	query := `select avg(dick_size) as "average", fname, lname , username 
-				from public.dick_size ds 
-				where chat_id = $1
-				group by fname, lname, username 
-				order by "average" DESC`
+	/*	query := `select avg(dick_size) as "average", fname, lname , username
+		from public.dick_size ds
+		where chat_id = $1
+		group by fname, lname, username
+		order by "average" DESC`*/
+	query := `
+	select avg(ds.dick_size) as "average", ud.fname, ud.lname , ud.username, ud.user_id  
+	from postgres.public.dick_size ds 
+	inner join postgres.public.user_data ud on ud.user_id = ds.user_id 
+	where ds.chat_id = $1
+	group by ud.fname, ud.lname , ud.username, ud.user_id 
+	order by "average" desc 
+`
 
 	var result []map[string]string
 
@@ -131,8 +225,10 @@ func (r *repo) GetUserAllSizesByChatId(ctx context.Context, chatId int64) ([]map
 	} else {
 		for rows.Next() {
 			var fname, lname, username, average string
-			err := rows.Scan(&average, &fname, &lname, &username)
+			var userId int
+			err := rows.Scan(&average, &fname, &lname, &username, &userId)
 			if err != nil {
+				Log.Printf("Error while scanning average: %v", err)
 				return result, err
 			}
 

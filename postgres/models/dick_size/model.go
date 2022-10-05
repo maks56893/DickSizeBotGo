@@ -13,3 +13,10 @@ type DickSize struct {
 	Chat_id      int       `json:"chat_id"`
 	Is_group     bool      `json:"is_group"`
 }
+
+type UserCredentials struct {
+	UserId   int    `json:"user_id"`
+	Fname    string `json:"fname"`
+	Username string `json:"username"`
+	Lname    string `json:"lname"`
+}

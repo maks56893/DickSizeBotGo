@@ -4,13 +4,14 @@ import (
 	models "DickSizeBot/postgres/models/dick_size"
 	"context"
 	"fmt"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"math/rand"
 	"time"
 )
 
 func GenerateDickSize() int {
 	rand.Seed(time.Now().UnixNano())
-	return rand.Intn(40)
+	return rand.Intn(39) + 1
 }
 
 func CheckLastMeasureDateIsToday(ctx context.Context, repo models.Repository, userid int64, chatId int64) bool {
@@ -40,5 +41,12 @@ func CheckIsTodayMeasure(measure models.DickSize) bool {
 		return true
 	} else {
 		return false
+	}
+}
+
+func AddRowToInlineKeyboard(keyboardMarkup *tgbotapi.InlineKeyboardMarkup, row []tgbotapi.InlineKeyboardButton) tgbotapi.InlineKeyboardMarkup {
+	newKeyboard := append(keyboardMarkup.InlineKeyboard, row)
+	return tgbotapi.InlineKeyboardMarkup{
+		InlineKeyboard: newKeyboard,
 	}
 }
