@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strconv"
 )
 
 type repo struct {
@@ -71,17 +72,26 @@ func (r *repo) GetAllCredentials(ctx context.Context, chatId int64) []models.Use
 }
 
 func (r *repo) SelectOnlyTodaysMeasures(ctx context.Context, chatId int64) ([]models.DickSize, error) {
-	//	todayDate := time.Now()
 
-	//	query := fmt.Sprintf("select * from postgres.public.dick_size ds where date(measure_date) = '%d-%d-%d' and chat_id = $1 order by dick_size desc ", todayDate.Year(), (todayDate.Month()), todayDate.Day())
+	//query := `
+	//		select *
+	//		from postgres.public.dick_size ds
+	//		where measure_date in (select max(measure_date) as measure_date
+	//								from postgres.public.dick_size ds_in
+	//								where chat_id = $1
+	//								group by user_id , fname , lname , username)
+	//		order by dick_size desc`
 	query := `
-			select *
-			from postgres.public.dick_size ds
-			where measure_date in (select max(measure_date) as measure_date
-									from postgres.public.dick_size ds_in
-									where chat_id = $1
-									group by user_id , fname , lname , username)
-			order by dick_size desc`
+select ds.id , ds.user_id , ud.fname , ud.username , ud.lname , ds.dick_size , ds.measure_date , ds.chat_id , ds.is_group 
+from postgres.public.dick_size ds
+inner join postgres.public.user_data ud on ds.user_id = ud.user_id
+where measure_date in (select max(measure_date) as measure_date
+						from postgres.public.dick_size ds_in
+						inner join postgres.public.user_data ud on ds_in.user_id = ud.user_id 
+						where ds.chat_id = $1
+						group by ds.user_id , ud.fname , ud.lname , ud.username)
+order by dick_size desc
+`
 
 	Log.Debugf("SelectOnlyTodaysMeasures query: %s", query)
 
@@ -236,7 +246,9 @@ func (r *repo) GetUserAllSizesByChatId(ctx context.Context, chatId int64) ([]map
 			oneRow["fname"] = fname
 			oneRow["lname"] = lname
 			oneRow["username"] = username
-			oneRow["average"] = average[:2]
+
+			averFloat, _ := strconv.ParseFloat(average, 64)
+			oneRow["average"] = strconv.Itoa(int(averFloat))
 
 			result = append(result, oneRow)
 		}
