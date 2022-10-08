@@ -40,9 +40,10 @@ func (r *repo) CreateOrUpdateUser(ctx context.Context, user_id int64, fname, lna
 
 func (r *repo) GetAllCredentials(ctx context.Context, chatId int64) []models.UserCredentials {
 	query := `
-	select distinct user_id , fname , username , lname 
-	from postgres.public.dick_size ds 
-	where chat_id = $1
+	select distinct ud.user_id , ud.fname , ud.username , ud.lname 
+	from postgres.public.user_data ud 
+	inner join postgres.public.dick_size ds on ud.user_id = ds.user_id 
+	where ds.chat_id = $1
 	`
 
 	Log.Debugf("GetAllCredentials query: %s", query)

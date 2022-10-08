@@ -10,6 +10,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"strconv"
+	"time"
 )
 
 const CommandToBot = "@FatBigDickBot"
@@ -36,7 +37,7 @@ func main() {
 	}
 
 	bot, err := tgbotapi.NewBotAPI("5445796005:AAHQLY5pFGMOZ_uVbEzel0tK0dRReIVC7bw") //main bot
-	// bot, err := tgbotapi.NewBotAPI("5681105337:AAHNnD0p6XcXo7biy9U7F7P-ctSkk-TrWGA") //test bot
+	//bot, err := tgbotapi.NewBotAPI("5681105337:AAHNnD0p6XcXo7biy9U7F7P-ctSkk-TrWGA") //test bot
 	if err != nil {
 		log.Panic(err)
 	}
@@ -61,17 +62,25 @@ func main() {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 	updates := bot.GetUpdatesChan(u)
-	//	ticker := time.NewTicker(1 * time.Minute)
-	//	Log.Printf("Ticker started at: %v", time.Now())
 
-	//go func() {
-	//	for {
-	//		<-ticker.C
-	//		repo.DeleteSizesByTime(ctx)
-	//		Log.Printf("Database was cleared at: %v", time.Now())
-	//	}
-	//
-	//}()
+	go func() {
+		for {
+			time.Sleep(1 * time.Minute)
+			weekCount := 0
+			if time.Now().Weekday().String() == "Monday" {
+				if time.Now().Hour() == 4 && time.Now().Minute() == 00 {
+					weekCount++
+					if weekCount == 2 {
+						repo.DeleteSizesByTime(ctx)
+						log.Printf("Database was cleared at: %v", time.Now())
+						weekCount = 0
+					}
+
+				}
+			}
+		}
+
+	}()
 
 	for update := range updates {
 
@@ -197,43 +206,7 @@ func main() {
 				for data := range userData {
 					fmt.Println(data)
 				}
-				/*				var buttons = []tgbotapi.InlineKeyboardButton{
-								{
-									Text: "button 1",
-									//URL:                          nil,
-									//LoginURL:                     nil,
-									CallbackData: &callbackData,
-								},
-								{
-									Text: "button 2",
-									//URL:                          nil,
-									//LoginURL:                     nil,
-									CallbackData: &callbackData,
-								},
-								{
-									Text: "button 3",
-									//URL:                          nil,
-									//LoginURL:                     nil,
-									CallbackData: &callbackData,
-								},
-								{
-									Text: "button 4",
-									//URL:                          nil,
-									//LoginURL:                     nil,
-									CallbackData: &callbackData,
-								},
-							}*/
 				var usersKeyboardButtons = tgbotapi.NewInlineKeyboardMarkup()
-				//				var testInlineKeyboard = tgbotapi.NewInlineKeyboardMarkup(buttons)
-				//tgbotapi.NewInlineKeyboardRow(
-				//	tgbotapi.InlineKeyboardButton{
-				//		Text: "Выбери соперника",
-				//		//URL:                          nil,
-				//		//LoginURL:                     nil,
-				//		CallbackData: &callbackData,
-				//	},
-				//),
-				//)
 				for _, userCred := range userData {
 					buttonText := userCred.Fname + " @" + userCred.Username + " " + userCred.Lname
 
@@ -257,87 +230,19 @@ func main() {
 				Log.Printf(err.Error())
 			}
 
-		} /*else if update.InlineQuery != nil {
-			time.Sleep(1 * time.Second)
-			if update.InlineQuery.Query == "" {
-				log.Println(update.InlineQuery)
-				if utils.CheckLastMeasureDateIsToday(ctx, repo, update.Message.From.ID, update.Message.Chat.ID) {
-					dickModel, _ := repo.GetLastMeasureByUserInThisChat(ctx, update.Message.From.ID, update.Message.Chat.ID)
-
-					replyText := GetRandMeasureReplyPattern(int(dickModel.Dick_size))
-
-					article := tgbotapi.NewInlineQueryResultArticle(update.InlineQuery.ID, "Узнай свой размер", replyText)
-
-					inlineConf := tgbotapi.InlineConfig{
-						InlineQueryID: update.InlineQuery.ID,
-						IsPersonal:    false,
-						CacheTime:     0,
-						Results:       []interface{}{article},
-					}
-
-					if _, err := bot.Request(inlineConf); err != nil {
-						Log.Println(err)
-					}
-				} else {
-					dickSize := utils.GenerateDickSize()
-
-					_, err := repo.InsertSize(ctx, update.InlineQuery.From.ID, update.InlineQuery.From.FirstName, update.InlineQuery.From.LastName, update.InlineQuery.From.UserName, dickSize, 0, false)
-					if err != nil {
-						Log.Printf(err.Error())
-					}
-
-					replyText := GetRandMeasureReplyPattern(dickSize)
-
-					//article := tgbotapi.NewInlineQueryResultArticle(update.InlineQuery.ID, "Достать линейку", replyText)
-					//
-					//
-					//inlineConf := tgbotapi.InlineConfig{
-					//	InlineQueryID: update.InlineQuery.ID,
-					//	IsPersonal:    false,
-					//	CacheTime:     0,
-					//	Results:       []interface{}{article},
-					//}
-
-					params := make(tgbotapi.Params)
-					//params["inline_query_id"] = update.InlineQuery.ID
-					//params["is_personal"] = "True"
-					//params["cache_time"] = "0"
-					params.AddNonEmpty("inline_query_id", update.InlineQuery.ID)
-					params.AddBool("is_personal", true)
-					params.AddNonEmpty("cache_time", "0")
-
-					//var results = []interface{}
-					//
-					//var first
-
-					resulVar := fmt.Sprintf("[{\"type\": \"article\", \"id\":\"%d\", \"title\": \"Достать линейку\", \"input_message_content\": \"%s\"}]", update.InlineQuery.ID, replyText)
-
-					err = params.AddInterface("results", resulVar)
-					if err != nil {
-						Log.Println(err)
-					}
-
-					_, err = bot.MakeRequest("answerInlineQuery", params)
-					//					_, err = bot.Request(inlineConf)
-
-					if err != nil {
-						Log.Println(err)
-					}
-				}
-
-			}
-
 		} else if update.CallbackQuery != nil {
-			callback := tgbotapi.NewCallback(update.CallbackQuery.ID /*update.CallbackQuery.Data*/ /*, "")
+			callback := tgbotapi.NewCallback(update.CallbackQuery.ID /*update.CallbackQuery.Data*/, "")
+
 			if _, err := bot.Request(callback); err != nil {
 				panic(err)
 			}
 
 			msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Data)
+			// msg.ReplyMarkup = ""
 			if _, err := bot.Send(msg); err != nil {
 				panic(err)
 			}
-		}*/
+		}
 
 	}
 
