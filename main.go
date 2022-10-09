@@ -37,7 +37,7 @@ func main() {
 	}
 
 	bot, err := tgbotapi.NewBotAPI("5445796005:AAHQLY5pFGMOZ_uVbEzel0tK0dRReIVC7bw") //main bot
-	//bot, err := tgbotapi.NewBotAPI("5681105337:AAHNnD0p6XcXo7biy9U7F7P-ctSkk-TrWGA") //test bot
+	// bot, err := tgbotapi.NewBotAPI("5681105337:AAHNnD0p6XcXo7biy9U7F7P-ctSkk-TrWGA") //test bot
 	if err != nil {
 		log.Panic(err)
 	}
@@ -152,7 +152,7 @@ func main() {
 					msg.ReplyToMessageID = update.Message.MessageID
 				}
 			case TodayCommand, TodayCommand + CommandToBot, TodayCommand + CommandToTestingBot:
-				if update.Message.Chat.IsGroup() {
+				if update.Message.Chat.IsGroup() || update.Message.Chat.IsSuperGroup() {
 					todayMeasures, err := repo.SelectOnlyTodaysMeasures(ctx, update.Message.Chat.ID)
 					if todayMeasures != nil {
 						Log.Errorf("Error while getting today measures: %s", err)
@@ -231,7 +231,7 @@ func main() {
 			}
 
 		} else if update.CallbackQuery != nil {
-			callback := tgbotapi.NewCallback(update.CallbackQuery.ID /*update.CallbackQuery.Data*/, "")
+			callback := tgbotapi.NewCallback(update.CallbackQuery.ID /*update.CallbackQuery.Data*/, "new callback")
 
 			if _, err := bot.Request(callback); err != nil {
 				panic(err)
