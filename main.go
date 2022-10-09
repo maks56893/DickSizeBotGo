@@ -112,7 +112,7 @@ func main() {
 					msg.ReplyToMessageID = update.Message.MessageID
 				}
 			case AverageCommangd, AverageCommangd + CommandToBot, AverageCommangd + CommandToTestingBot:
-				if update.Message.Chat.IsGroup() {
+				if update.Message.Chat.IsGroup() || update.Message.Chat.IsSuperGroup() {
 					chatAverages, _ := repo.GetUserAllSizesByChatId(ctx, update.Message.Chat.ID)
 
 					msgText := GetRandAverageRepltText()
