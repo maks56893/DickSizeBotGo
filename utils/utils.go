@@ -14,6 +14,20 @@ func GenerateDickSize() int {
 	return rand.Intn(39) + 1
 }
 
+func GetDuelWinner(firstId int64, secondId int64) int64 {
+	rand.Seed(time.Now().UnixNano())
+
+	firstRes := rand.Intn(100)
+	time.Sleep(10 * time.Millisecond)
+	secondRes := rand.Intn(100)
+
+	if firstRes > secondRes {
+		return firstId
+	} else {
+		return secondId
+	}
+}
+
 func CheckLastMeasureDateIsToday(ctx context.Context, repo models.Repository, userid int64, chatId int64) bool {
 	dickAndDate, err := repo.GetLastMeasureByUserInThisChat(ctx, userid, chatId)
 	if err != nil {

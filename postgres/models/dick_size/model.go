@@ -15,8 +15,16 @@ type DickSize struct {
 }
 
 type UserCredentials struct {
-	UserId   int    `json:"user_id"`
+	UserId   int64  `json:"user_id"`
 	Fname    string `json:"fname"`
 	Username string `json:"username"`
 	Lname    string `json:"lname"`
+}
+
+type Duel struct {
+	CallerUserId int64 `json:"caller_user_id"`
+	CalledUserId int64 `json:"called_user_id"`
+	ChatID       int64 `json:"chat_id"`
+	Bet          int   `json:"bet"`
+	Winner       int64 `json:"winner"`
 }

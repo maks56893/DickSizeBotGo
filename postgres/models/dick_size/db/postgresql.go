@@ -14,6 +14,79 @@ type repo struct {
 	client postgres.Client
 }
 
+func (r *repo) IncreaceLastDickSize(ctx context.Context, dickSizeID int, bet int) {
+	query := `
+	update postgres.public.dick_size 
+	set dick_size = (select dick_size + ($2) as "updated_dick"
+				 from dick_size 
+				 where id = $1
+				)
+	where id  = $1
+`
+
+	Log.Debugf("Exec IncreaceLastDickSize query: %v", query)
+
+	var updatedRows int
+
+	err := r.client.QueryRow(ctx, query, dickSizeID, bet).Scan(updatedRows)
+	if err != nil {
+		Log.Errorf("Error while exec IncreaceLastDickSize query: %v", err)
+	}
+}
+
+func (r *repo) GetUserData(ctx context.Context, userId int64) (user models.UserCredentials) {
+	query := `
+select user_id, fname, username, lname
+from public.user_data
+where user_id = $1
+`
+
+	rows, err := r.client.Query(ctx, query, userId)
+	if err != nil {
+		Log.Errorf("Error while exec GetUserData query: %v", err)
+		return user
+	} else {
+		counter := 0
+		for rows.Next() {
+			counter++
+			if counter > 1 {
+				Log.Errorf("GetUserData query returned more than one profile")
+				break
+			}
+
+			err = rows.Scan(
+				&user.UserId,
+				&user.Fname,
+				&user.Username,
+				&user.Lname,
+			)
+
+			if err != nil {
+				Log.Errorf("Error while parsing query result: %v", err)
+			}
+		}
+	}
+	return user
+}
+
+func (r *repo) InsertDuelData(ctx context.Context, duel models.Duel) int {
+	query := `
+insert into public.duels  (caller_user_id , called_user_id , chat_id , bet , winner, duel_time) values
+($1, $2, $3 , $4 , $5, CURRENT_TIMESTAMP)
+`
+
+	Log.Debugf("Query: %s", query)
+
+	var insertedId int
+
+	err := r.client.QueryRow(ctx, query, duel.CallerUserId, duel.CalledUserId, duel.ChatID, duel.Bet, duel.Winner).Scan(&insertedId)
+	if err != nil {
+		Log.Errorf("Error while exec CreateOrUpdateUser query: %v", err)
+		return 0
+	}
+	return insertedId
+}
+
 func (r *repo) CreateOrUpdateUser(ctx context.Context, user_id int64, fname, lname, username string, chat_id int64) int {
 	query := `
 	insert into postgres.public.user_data (user_id, fname, username, lname) values 

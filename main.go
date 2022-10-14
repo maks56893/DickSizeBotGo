@@ -1,15 +1,20 @@
 package main
 
 import (
+	cash2 "DickSizeBot/cash"
+	"DickSizeBot/cash_domain"
 	. "DickSizeBot/logger"
 	"DickSizeBot/postgres"
+	models "DickSizeBot/postgres/models/dick_size"
 	"DickSizeBot/postgres/models/dick_size/db"
 	"DickSizeBot/utils"
 	"context"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -17,13 +22,13 @@ const CommandToBot = "@FatBigDickBot"
 const CommandToTestingBot = "@TestingDickSizeBot"
 
 const MeasureCommand = "/check_size"
-const AverageCommangd = "/get_average"
+const AverageCommand = "/get_average"
 const TodayCommand = "/last_measures"
 
 //var numericKeyboard = tgbotapi.NewReplyKeyboard(
 //	tgbotapi.NewKeyboardButtonRow(
 //		tgbotapi.NewKeyboardButton(MeasureCommand),
-//		tgbotapi.NewKeyboardButton(AverageCommangd),
+//		tgbotapi.NewKeyboardButton(AverageCommand),
 //		//		tgbotapi.NewKeyboardButton("3"),
 //	),
 //)
@@ -36,8 +41,8 @@ func main() {
 		return
 	}
 
-	bot, err := tgbotapi.NewBotAPI("5445796005:AAHQLY5pFGMOZ_uVbEzel0tK0dRReIVC7bw") //main bot
-	// bot, err := tgbotapi.NewBotAPI("5681105337:AAHNnD0p6XcXo7biy9U7F7P-ctSkk-TrWGA") //test bot
+	//bot, err := tgbotapi.NewBotAPI("5445796005:AAHQLY5pFGMOZ_uVbEzel0tK0dRReIVC7bw") //main bot
+	bot, err := tgbotapi.NewBotAPI("5681105337:AAHNnD0p6XcXo7biy9U7F7P-ctSkk-TrWGA") //test bot
 	if err != nil {
 		log.Panic(err)
 	}
@@ -53,6 +58,8 @@ func main() {
 	if err != nil {
 		Log.Println(err.Error())
 	}
+
+	cash := cash2.NewCash().(cash_domain.ICash)
 
 	repo := db.NewRepo(client)
 
@@ -82,11 +89,22 @@ func main() {
 
 	}()
 
+	//	var msgToDel int
+	inputAttempts := 0
+
 	for update := range updates {
 
 		var msg tgbotapi.MessageConfig
 
-		if update.Message != nil { // If we got a message
+		var duelDataFromCallback interface{}
+		var hasCash bool
+
+		if update.Message != nil {
+			key := "duel_" + strconv.Itoa(int(update.Message.From.ID))
+			duelDataFromCallback, hasCash = cash.Get(key)
+		}
+
+		if update.Message != nil && !hasCash { // If we got a message
 
 			switch update.Message.Text {
 			case MeasureCommand, MeasureCommand + CommandToBot, MeasureCommand + CommandToTestingBot:
@@ -111,7 +129,7 @@ func main() {
 					msg.ReplyMarkup = removeKeyboard
 					msg.ReplyToMessageID = update.Message.MessageID
 				}
-			case AverageCommangd, AverageCommangd + CommandToBot, AverageCommangd + CommandToTestingBot:
+			case AverageCommand, AverageCommand + CommandToBot, AverageCommand + CommandToTestingBot:
 				if update.Message.Chat.IsGroup() || update.Message.Chat.IsSuperGroup() {
 					chatAverages, _ := repo.GetUserAllSizesByChatId(ctx, update.Message.Chat.ID)
 
@@ -201,49 +219,153 @@ func main() {
 				}
 			case "/test":
 
-				callbackData := "test"
+				//				callbackData := ""
 				userData := repo.GetAllCredentials(ctx, update.Message.Chat.ID)
 				for data := range userData {
 					fmt.Println(data)
 				}
 				var usersKeyboardButtons = tgbotapi.NewInlineKeyboardMarkup()
 				for _, userCred := range userData {
+					userId := "duel_user_id " + strconv.Itoa(int(userCred.UserId))
+
 					buttonText := userCred.Fname + " @" + userCred.Username + " " + userCred.Lname
 
 					row := tgbotapi.NewInlineKeyboardRow(
 						tgbotapi.InlineKeyboardButton{
 							Text:         buttonText,
-							CallbackData: &callbackData,
+							CallbackData: &userId,
 						},
 					)
 					usersKeyboardButtons = utils.AddRowToInlineKeyboard(&usersKeyboardButtons, row)
 				}
 
-				msg = tgbotapi.NewMessage(update.Message.Chat.ID, "test inline keyboard")
+				msg = tgbotapi.NewMessage(update.Message.Chat.ID, "С кем хочешь помериться?")
 				msg.ReplyMarkup = usersKeyboardButtons
 				msg.ParseMode = "HTML"
 				msg.ReplyToMessageID = update.Message.MessageID
 
 			}
-			_, err := bot.Send(msg)
+			message, err := bot.Send(msg)
+			if err != nil {
+				Log.Printf(err.Error())
+			}
+			//			msgToDel = message.MessageID
+			Log.Debugf("Sended message: %v", message)
+
+			//Обработка ввода ставки после callback и с данными к кеше
+		} else if update.Message != nil && hasCash {
+
+			duelData := models.Duel{
+				CallerUserId: duelDataFromCallback.(models.Duel).CallerUserId,
+				CalledUserId: duelDataFromCallback.(models.Duel).CalledUserId,
+				ChatID:       duelDataFromCallback.(models.Duel).ChatID,
+			}
+
+			if inputAttempts < 2 {
+				//Поиск числа
+				findCorrectNum, err := regexp.MatchString("[1-5]", update.Message.Text)
+				if err != nil {
+					Log.Errorf("Error while trying find number in text for duel??????????: %v", err)
+				}
+				//Поиск отмены
+				findCancel, err := regexp.MatchString("саси", update.Message.Text)
+				if err != nil {
+					Log.Errorf("Error while trying find number in text for duel??????????: %v", err)
+				}
+
+				if findCorrectNum {
+					duelData.Bet, _ = strconv.Atoi(update.Message.Text)
+					duelData.Winner = utils.GetDuelWinner(duelData.CalledUserId, duelData.CallerUserId)
+
+					_ = repo.InsertDuelData(ctx, duelData)
+					//					msgText := fmt.Sprintf("Вызвал на дуэль %v, кого вызвали на дуэль: %v, ставка: %d, подебитель: %d", duelData.CallerUserId, duelData.CalledUserId, duelData.Bet, duelData.Winner)
+					//					msg = tgbotapi.NewMessage(update.Message.Chat.ID, msgText)
+
+					//Данные победителя и проигравшего
+					var winner, loser models.UserCredentials
+
+					if duelData.Winner == duelData.CallerUserId {
+						winner = repo.GetUserData(ctx, duelData.CallerUserId)
+						loser = repo.GetUserData(ctx, duelData.CalledUserId)
+					} else {
+						winner = repo.GetUserData(ctx, duelData.CalledUserId)
+						loser = repo.GetUserData(ctx, duelData.CallerUserId)
+					}
+
+					//Обновляем последний размер пользователя
+					winnerDickSize, err := repo.GetLastMeasureByUserInThisChat(ctx, winner.UserId, duelData.ChatID)
+					if err != nil {
+						Log.Errorf("Error while get last measure by user: %v", err)
+					}
+					loserDickSize, err := repo.GetLastMeasureByUserInThisChat(ctx, loser.UserId, duelData.ChatID)
+					if err != nil {
+						Log.Errorf("Error while get last measure by user: %v", err)
+					}
+
+					if &winnerDickSize != nil && &loserDickSize != nil {
+						repo.IncreaceLastDickSize(ctx, winnerDickSize.Id, duelData.Bet)
+						repo.IncreaceLastDickSize(ctx, loserDickSize.Id, duelData.Bet-duelData.Bet*2)
+					}
+
+					//Формируем сообщение о дуэли
+					msgText := fmt.Sprintf("Победил %s @%s %s, кок сакер %s @%s %s", winner.Fname, winner.Username, winner.Lname, loser.Fname, loser.Username, loser.Lname)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, msgText)
+
+					key := "duel_" + strconv.Itoa(int(update.Message.From.ID))
+					cash.Del(key)
+				} else if findCancel {
+
+					//Просто удаляем кеш, так как получили команду отмены
+					key := "duel_" + strconv.Itoa(int(update.Message.From.ID))
+					cash.Del(key)
+				} else {
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Давай попробуем ввести число от 1 до 5 ещё раз :)")
+					inputAttempts++
+				}
+
+			}
+
+			if inputAttempts == 2 {
+				msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Поздравляю, кок сакер, ты не смог с двух попыток ввести число. Начинай все заново")
+				inputAttempts = 0
+			}
+			message, err := bot.Send(msg)
 			if err != nil {
 				Log.Printf(err.Error())
 			}
 
+			//			msgToDel = message.MessageID
+			Log.Debugf("Sended message: %v", message)
+
 		} else if update.CallbackQuery != nil {
-			callback := tgbotapi.NewCallback(update.CallbackQuery.ID /*update.CallbackQuery.Data*/, "new callback")
+			callbackData := strings.Split(update.CallbackQuery.Data, " ")
+			if callbackData[0] == "duel_user_id" {
+				callback := tgbotapi.NewCallback(update.CallbackQuery.ID /*update.CallbackQuery.Data*/, "duel callback")
 
-			if _, err := bot.Request(callback); err != nil {
-				panic(err)
-			}
+				if _, err := bot.Request(callback); err != nil {
+					Log.Errorf("Error while exec remove msg request: %v", err)
+				}
 
-			msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Data)
-			// msg.ReplyMarkup = ""
-			if _, err := bot.Send(msg); err != nil {
-				panic(err)
+				msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID /*update.CallbackQuery.Data*/, "Сколько сантиметров хочешь поставить? Если передумал, то введи \"саси\"")
+				//				msg.ReplyMarkup = betKeyboard
+				if _, err := bot.Send(msg); err != nil {
+					Log.Errorf("Error while sending msg after callback: %v", err)
+				}
+
+				calledId, _ := strconv.Atoi(callbackData[1])
+
+				dataForDuel := models.Duel{
+					CallerUserId: update.CallbackQuery.From.ID,
+					CalledUserId: int64(calledId),
+					ChatID:       update.CallbackQuery.Message.Chat.ID,
+					//					Bet:          "",
+				}
+
+				key := "duel_" + strconv.Itoa(int(update.CallbackQuery.From.ID))
+				cash.Set(key, dataForDuel, 1*time.Minute)
+
 			}
 		}
-
 	}
 
 }

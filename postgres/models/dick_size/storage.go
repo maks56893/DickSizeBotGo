@@ -11,7 +11,10 @@ type Repository interface {
 	DeleteSizesByTime(ctx context.Context)
 	SelectOnlyTodaysMeasures(ctx context.Context, chatId int64) ([]DickSize, error)
 	GetAllCredentials(ctx context.Context, chatId int64) []UserCredentials
+	GetUserData(ctx context.Context, userId int64) (user UserCredentials)
 	CreateOrUpdateUser(ctx context.Context, user_id int64, fname, lname, username string, chat_id int64) int
+	InsertDuelData(ctx context.Context, duel Duel) int
+	IncreaceLastDickSize(ctx context.Context, dickSizeId int, bet int)
 
 	//	CreateTableIfNotExists(ctx context.Context, chatId int64)
 }

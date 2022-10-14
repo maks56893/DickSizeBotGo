@@ -31,7 +31,8 @@ func NewClient(ctx context.Context, maxAttemps int, username, password, host, po
 		}
 
 		return nil
-	}, maxAttemps, 5*time.Second)
+	},
+		maxAttemps, 5*time.Second)
 
 	if err != nil {
 		log.Fatal("error do with tries postgresql")
