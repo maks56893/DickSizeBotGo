@@ -35,6 +35,17 @@ func NewCash() interface{} {
 // 	return obj
 // }
 
+func (obj *cash) DelAll() []string {
+	var deletedKeys = make([]string, 0, 10)
+
+	for key, _ := range obj.items {
+		_ = obj.Del(key)
+		deletedKeys = append(deletedKeys, key)
+	}
+
+	return deletedKeys
+}
+
 func (obj *cash) Del(key string) bool {
 	obj.RLock()
 	defer obj.RUnlock()

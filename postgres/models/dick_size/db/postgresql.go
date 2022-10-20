@@ -7,28 +7,75 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"strconv"
+	"time"
 )
 
 type repo struct {
 	client postgres.Client
 }
 
+func (r *repo) GetLastDuelByUserId(ctx context.Context, userId int64, chatId int64) (time.Time, error) {
+	query := `
+	select /*duel_id , caller_user_id , called_user_id , chat_id , bet, winner ,*/ duel_time 
+	from postgres.public.duels duels
+	where caller_user_id = %d and chat_id = %d
+	order by duel_time desc
+	limit 1
+`
+	query = fmt.Sprintf(query, userId, chatId)
+
+	//	Log.Debugf("Exec query GetLastDuelByUserId: %s", query)
+
+	var duelTime time.Time
+
+	rows, err := r.client.Query(ctx, query)
+	if err != nil {
+		Log.Errorf("Error while exec query GetLastDuelByUserId: %s", query)
+		return duelTime, err
+	} else {
+		for rows.Next() {
+			err := rows.Scan(
+				//&duel.DuelId,
+				//&duel.CallerUserId,
+				//&duel.CallerRoll,
+				//&duel.CalledUserId,
+				//&duel.CalledRoll,
+				//&duel.ChatID,
+				//&duel.Bet,
+				//&duel.Winner,
+				//&duel.DuelDate,
+				&duelTime,
+			)
+
+			if err != nil {
+				Log.Errorf("Error while parsing query result: %v", err)
+				return duelTime, err
+			}
+		}
+	}
+
+	return duelTime, nil
+}
+
 func (r *repo) IncreaceLastDickSize(ctx context.Context, dickSizeID int, bet int) {
 	query := `
 	update postgres.public.dick_size 
-	set dick_size = (select dick_size + ($2) as "updated_dick"
+	set dick_size = (select dick_size + (%v) as "updated_dick"
 				 from dick_size 
-				 where id = $1
+				 where id = %v
 				)
-	where id  = $1
+	where id  = %v
+	returning id
 `
 
+	query = fmt.Sprintf(query, bet, dickSizeID, dickSizeID)
 	Log.Debugf("Exec IncreaceLastDickSize query: %v", query)
 
-	var updatedRows int
+	var quer interface{}
 
-	err := r.client.QueryRow(ctx, query, dickSizeID, bet).Scan(updatedRows)
+	err := r.client.QueryRow(ctx, query).Scan(quer)
 	if err != nil {
 		Log.Errorf("Error while exec IncreaceLastDickSize query: %v", err)
 	}
@@ -71,17 +118,19 @@ where user_id = $1
 
 func (r *repo) InsertDuelData(ctx context.Context, duel models.Duel) int {
 	query := `
-insert into public.duels  (caller_user_id , called_user_id , chat_id , bet , winner, duel_time) values
-($1, $2, $3 , $4 , $5, CURRENT_TIMESTAMP)
+insert into public.duels  (caller_user_id , caller_roll , called_user_id , called_roll , chat_id , bet , winner, duel_time) values
+(%d, %d, %d , %d , %d,  %d , %d , CURRENT_TIMESTAMP) returning duel_id
 `
+
+	query = fmt.Sprintf(query, duel.CallerUserId, duel.CallerRoll, duel.CalledUserId, duel.CalledRoll, duel.ChatID, duel.Bet, duel.Winner)
 
 	Log.Debugf("Query: %s", query)
 
 	var insertedId int
 
-	err := r.client.QueryRow(ctx, query, duel.CallerUserId, duel.CalledUserId, duel.ChatID, duel.Bet, duel.Winner).Scan(&insertedId)
+	err := r.client.QueryRow(ctx, query).Scan(&insertedId)
 	if err != nil {
-		Log.Errorf("Error while exec CreateOrUpdateUser query: %v", err)
+		Log.Errorf("Error while exec InsertDuelData query: %v", err)
 		return 0
 	}
 	return insertedId
@@ -116,14 +165,16 @@ func (r *repo) GetAllCredentials(ctx context.Context, chatId int64) []models.Use
 	select distinct ud.user_id , ud.fname , ud.username , ud.lname 
 	from postgres.public.user_data ud 
 	inner join postgres.public.dick_size ds on ud.user_id = ds.user_id 
-	where ds.chat_id = $1
+	where ds.chat_id = %d
 	`
+
+	query = fmt.Sprintf(query, chatId)
 
 	Log.Debugf("GetAllCredentials query: %s", query)
 
 	var usersData []models.UserCredentials
 
-	rows, err := r.client.Query(ctx, query, chatId)
+	rows, err := r.client.Query(ctx, query)
 	if err != nil {
 		Log.Errorf("SQL error while exec SelectOnlyTodaysMeasures: %s", err.Error())
 	} else {
@@ -249,7 +300,7 @@ func (r *repo) InsertSize(ctx context.Context, user_id int64, fname, lname, user
 
 func (r *repo) GetLastMeasureByUserInThisChat(ctx context.Context, user_id int64, chatId int64) (models.DickSize, error) {
 	query := `
-	select ds.user_id , ud.fname , ud.username , ud.lname , ds.dick_size , ds.measure_date , ds.chat_id , ds.is_group 
+	select ds.id, ds.user_id , ud.fname , ud.username , ud.lname , ds.dick_size , ds.measure_date , ds.chat_id , ds.is_group 
 	from postgres.public.dick_size ds 
 	inner join postgres.public.user_data ud on ud.user_id = ds.user_id 
 	where ds.user_id = $1 and ds.chat_id = $2
@@ -267,6 +318,7 @@ func (r *repo) GetLastMeasureByUserInThisChat(ctx context.Context, user_id int64
 	} else {
 		for rows.Next() {
 			err := rows.Scan(
+				&model.Id,
 				&model.UsedId,
 				&model.Fname,
 				&model.Username,

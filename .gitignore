@@ -3,3 +3,6 @@
 .git123/
 /log/bot-log.log
 /DickSizeBot
+/create bot table.sql
+/create duels.sql
+/create user_data.sql

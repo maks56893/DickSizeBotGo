@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"time"
 )
 
 type Repository interface {
@@ -15,6 +16,7 @@ type Repository interface {
 	CreateOrUpdateUser(ctx context.Context, user_id int64, fname, lname, username string, chat_id int64) int
 	InsertDuelData(ctx context.Context, duel Duel) int
 	IncreaceLastDickSize(ctx context.Context, dickSizeId int, bet int)
+	GetLastDuelByUserId(ctx context.Context, userId int64, chatId int64) (time.Time, error)
 
 	//	CreateTableIfNotExists(ctx context.Context, chatId int64)
 }
