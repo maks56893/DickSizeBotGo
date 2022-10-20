@@ -43,8 +43,8 @@ func main() {
 		return
 	}
 
-	bot, err := tgbotapi.NewBotAPI("5445796005:AAHQLY5pFGMOZ_uVbEzel0tK0dRReIVC7bw") //main bot
-	//bot, err := tgbotapi.NewBotAPI("5681105337:AAHNnD0p6XcXo7biy9U7F7P-ctSkk-TrWGA") //test bot
+	//bot, err := tgbotapi.NewBotAPI("5445796005:AAHQLY5pFGMOZ_uVbEzel0tK0dRReIVC7bw") //main bot
+	bot, err := tgbotapi.NewBotAPI("5681105337:AAHNnD0p6XcXo7biy9U7F7P-ctSkk-TrWGA") //test bot
 	if err != nil {
 		log.Panic(err)
 	}
@@ -382,12 +382,6 @@ func main() {
 				cash.Set(key, dataForDuel, 1*time.Minute)
 
 			} else if callbackData[0] == "page" {
-				//deleteRequesConfig := tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID)
-				//_, err := bot.Request(deleteRequesConfig)
-				//if err != nil {
-				//	Log.Errorf("can't delete callback message: %v", err)
-				//	continue
-				//}
 
 				duelKeyboard, ok := cash.Get("duelKeyboard")
 				if !ok {
@@ -410,6 +404,13 @@ func main() {
 				}
 				Log.Tracef("%v", res)
 			} else if update.CallbackQuery.Data == "cancel" {
+				deleteRequesConfig := tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID)
+				_, err := bot.Request(deleteRequesConfig)
+				if err != nil {
+					Log.Errorf("can't delete callback message: %v", err)
+					continue
+				}
+
 				deletedKeys := cash.DelAll()
 				Log.Infof("delete all cash keys: %v", deletedKeys)
 				continue
