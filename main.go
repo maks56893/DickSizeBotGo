@@ -282,7 +282,7 @@ func main() {
 					Log.Errorf("Error while trying find number in text for duel??????????: %v", err)
 				}
 				//Поиск отмены
-				findCancel, err := regexp.MatchString("саси", update.Message.Text)
+				findCancel, err := regexp.MatchString("С|саси", update.Message.Text)
 				if err != nil {
 					Log.Errorf("Error while trying find number in text for duel??????????: %v", err)
 				}
