@@ -43,8 +43,8 @@ func main() {
 		return
 	}
 
-	bot, err := tgbotapi.NewBotAPI("5445796005:AAHQLY5pFGMOZ_uVbEzel0tK0dRReIVC7bw") //main bot
-	//bot, err := tgbotapi.NewBotAPI("5681105337:AAHNnD0p6XcXo7biy9U7F7P-ctSkk-TrWGA") //test bot
+	//bot, err := tgbotapi.NewBotAPI("5445796005:AAHQLY5pFGMOZ_uVbEzel0tK0dRReIVC7bw") //main bot
+	bot, err := tgbotapi.NewBotAPI("5681105337:AAHNnD0p6XcXo7biy9U7F7P-ctSkk-TrWGA") //test bot
 	if err != nil {
 		log.Panic(err)
 	}
@@ -365,7 +365,7 @@ func main() {
 					Log.Errorf("Error while exec remove msg request: %v", err)
 				}
 
-				msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Сколько сантиметров хочешь поставить? Если передумал, то введи \"саси\"")
+				msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Сколько сантиметров хочешь поставить? Введи число от 1 до 5. Если передумал, то введи \"саси\"")
 				if _, err := bot.Send(msg); err != nil {
 					Log.Errorf("Error while sending msg after callback: %v", err)
 				}
