@@ -220,6 +220,17 @@ func main() {
 					msg.ReplyToMessageID = update.Message.MessageID
 				}
 			case DuelCommand, DuelCommand + CommandToBot, DuelCommand + CommandToTestingBot:
+				if !(update.Message.Chat.IsGroup() || update.Message.Chat.IsSuperGroup()) {
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Работает только в группе")
+					msg.ParseMode = "HTML"
+					msg.ReplyToMessageID = update.Message.MessageID
+					_, err := bot.Send(msg)
+					if err != nil {
+						Log.Printf(err.Error())
+					}
+					continue
+				}
+
 				if !utils.CheckLastUsersDuelIsToday(ctx, repo, update.Message.From.ID, update.Message.Chat.ID) {
 					userData := repo.GetAllCredentials(ctx, update.Message.Chat.ID)
 					for data := range userData {
@@ -227,6 +238,10 @@ func main() {
 					}
 					var usersKeyboardButtons = tgbotapi.NewInlineKeyboardMarkup()
 					for _, userCred := range userData {
+						if userCred.UserId == update.Message.From.ID {
+							continue
+						}
+
 						userId := "duel_user_id#" + strconv.Itoa(int(userCred.UserId))
 
 						buttonText := userCred.Fname + " @" + userCred.Username + " " + userCred.Lname
