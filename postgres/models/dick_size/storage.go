@@ -17,6 +17,7 @@ type Repository interface {
 	InsertDuelData(ctx context.Context, duel Duel) int
 	IncreaceLastDickSize(ctx context.Context, dickSizeId int, bet int)
 	GetLastDuelByUserId(ctx context.Context, userId int64, chatId int64) (time.Time, error)
+	GetDuelsStat(ctx context.Context, chatId int64) []map[string]string
 
 	//	CreateTableIfNotExists(ctx context.Context, chatId int64)
 }

@@ -16,9 +16,52 @@ type repo struct {
 	client postgres.Client
 }
 
+func (r *repo) GetDuelsStat(ctx context.Context, chatId int64) []map[string]string {
+	query := `
+select winner, ud.fname , ud.username , ud.lname , count(winner) as "wins"
+from postgres.public.duels d 
+inner join postgres.public.user_data ud on d.winner = ud.user_id 
+where d.chat_id = %d
+group by winner, ud.fname , ud.username , ud.lname 
+order by count(winner) desc 
+
+`
+
+	var result []map[string]string
+
+	query = fmt.Sprintf(query, chatId)
+
+	Log.Debugf("query GetDuelsStat: %v", query)
+
+	rows, err := r.client.Query(ctx, query)
+	if err != nil {
+		Log.Errorf("query nothing returned")
+		return result
+	} else {
+		for rows.Next() {
+			var fname, lname, username string
+			var winnerId, wins int
+			err := rows.Scan(&winnerId, &fname, &lname, &username, &wins)
+			if err != nil {
+				Log.Printf("Error while scanning duels wins stat: %v", err)
+				return result
+			}
+
+			oneRow := make(map[string]string)
+			oneRow["fname"] = fname
+			oneRow["lname"] = lname
+			oneRow["username"] = username
+			oneRow["wins"] = strconv.Itoa(wins)
+
+			result = append(result, oneRow)
+		}
+	}
+	return result
+}
+
 func (r *repo) GetLastDuelByUserId(ctx context.Context, userId int64, chatId int64) (time.Time, error) {
 	query := `
-	select /*duel_id , caller_user_id , called_user_id , chat_id , bet, winner ,*/ duel_time 
+	select duel_time 
 	from postgres.public.duels duels
 	where caller_user_id = %d and chat_id = %d
 	order by duel_time desc
@@ -26,7 +69,7 @@ func (r *repo) GetLastDuelByUserId(ctx context.Context, userId int64, chatId int
 `
 	query = fmt.Sprintf(query, userId, chatId)
 
-	//	Log.Debugf("Exec query GetLastDuelByUserId: %s", query)
+	Log.Debugf("Exec query GetLastDuelByUserId: %s", query)
 
 	var duelTime time.Time
 
@@ -337,11 +380,6 @@ func (r *repo) GetLastMeasureByUserInThisChat(ctx context.Context, user_id int64
 }
 
 func (r *repo) GetUserAllSizesByChatId(ctx context.Context, chatId int64) ([]map[string]string, error) {
-	/*	query := `select avg(dick_size) as "average", fname, lname , username
-		from public.dick_size ds
-		where chat_id = $1
-		group by fname, lname, username
-		order by "average" DESC`*/
 	query := `
 	select avg(ds.dick_size) as "average", ud.fname, ud.lname , ud.username, ud.user_id  
 	from postgres.public.dick_size ds 

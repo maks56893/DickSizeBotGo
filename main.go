@@ -19,13 +19,15 @@ import (
 	"time"
 )
 
-const CommandToBot = "@FatBigDickBot"
-const CommandToTestingBot = "@TestingDickSizeBot"
-
-const MeasureCommand = "/check_size"
-const AverageCommand = "/get_average"
-const TodayCommand = "/last_measures"
-const DuelCommand = "/duel"
+const (
+	CommandToBot        = "@FatBigDickBot"
+	CommandToTestingBot = "@TestingDickSizeBot"
+	MeasureCommand      = "/check_size"
+	AverageCommand      = "/get_average"
+	TodayCommand        = "/last_measures"
+	DuelCommand         = "/duel"
+	DuelStatsCommand    = "/stats"
+)
 
 //var numericKeyboard = tgbotapi.NewReplyKeyboard(
 //	tgbotapi.NewKeyboardButtonRow(
@@ -148,11 +150,11 @@ func main() {
 							msgText += username
 							msgText += " "
 						}
-						if lname, ok := userData["lname"]; ok {
+						if lname, ok := userData["lname"]; ok && userData["lname"] != "" {
 							msgText += lname
 							msgText += " "
 						}
-						if average, ok := userData["average"]; ok {
+						if average, ok := userData["average"]; ok && userData["username"] != "" {
 							msgText += average
 							msgText += " см"
 							msgText += "\n"
@@ -272,6 +274,43 @@ func main() {
 					msg.ParseMode = "HTML"
 					msg.ReplyToMessageID = update.Message.MessageID
 				}
+			case DuelStatsCommand, DuelStatsCommand + CommandToBot, DuelStatsCommand + CommandToTestingBot:
+				if update.Message.Chat.IsGroup() || update.Message.Chat.IsSuperGroup() {
+					duelsStat := repo.GetDuelsStat(ctx, update.Message.Chat.ID)
+
+					msgText := ""
+					for _, userData := range duelsStat {
+						if fname, ok := userData["fname"]; ok {
+							msgText += "· "
+							msgText += fname
+							msgText += " "
+						}
+						if username, ok := userData["username"]; ok && userData["username"] != "" {
+							msgText += "@"
+							msgText += username
+							msgText += " "
+						}
+						if lname, ok := userData["lname"]; ok && userData["lname"] != "" {
+							msgText += lname
+							msgText += " "
+						}
+						if wins, ok := userData["wins"]; ok {
+							msgText += "победил " + wins + " раз(а)"
+							msgText += "\n"
+						}
+					}
+
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, msgText)
+					msg.ReplyMarkup = removeKeyboard
+					msg.ParseMode = "HTML"
+					msg.ReplyToMessageID = update.Message.MessageID
+				} else {
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Работает только в группе")
+					msg.ReplyMarkup = removeKeyboard
+					msg.ParseMode = "HTML"
+					msg.ReplyToMessageID = update.Message.MessageID
+				}
+
 			}
 			message, err := bot.Send(msg)
 			if err != nil {
@@ -364,8 +403,9 @@ func main() {
 			Log.Debugf("Sended message: %v", message)
 
 		} else if update.CallbackQuery != nil {
-			deleteRequesConfig := tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID)
-			_, err := bot.Request(deleteRequesConfig)
+
+			deleteRequestConfig := tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID)
+			_, err := bot.Request(deleteRequestConfig)
 			if err != nil {
 				Log.Errorf("can't delete callback message: %v", err)
 				continue
@@ -411,7 +451,6 @@ func main() {
 				msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "С кем хочешь помериться?")
 				msg.ReplyMarkup = test
 				msg.ParseMode = "HTML"
-				//				msg.ReplyToMessageID = update.Message.MessageID
 
 				res, err := bot.Send(msg)
 				if err != nil {
