@@ -384,16 +384,18 @@ func (r *repo) GetUserAllSizesByChatId(ctx context.Context, chatId int64) ([]map
 	select avg(ds.dick_size) as "average", ud.fname, ud.lname , ud.username, ud.user_id  
 	from postgres.public.dick_size ds 
 	inner join postgres.public.user_data ud on ud.user_id = ds.user_id 
-	where ds.chat_id = $1
+	where ds.chat_id = %d
 	group by ud.fname, ud.lname , ud.username, ud.user_id 
 	order by "average" desc 
 `
 
+	query = fmt.Sprintf(query, chatId)
+
 	var result []map[string]string
 
-	Log.Debugf("select avg(dick_size) as \"average\", fname, lname , username \n\t\t\t\tfrom public.dick_size ds \n\t\t\t\twhere chat_id = %v\n\t\t\t\tgroup by fname, lname, username \n\t\t\t\torder by \"average\" DESC", chatId)
+	Log.Debugf(query)
 
-	rows, err := r.client.Query(ctx, query, chatId)
+	rows, err := r.client.Query(ctx, query)
 	if err != nil {
 		return result, err
 	} else {
@@ -402,7 +404,7 @@ func (r *repo) GetUserAllSizesByChatId(ctx context.Context, chatId int64) ([]map
 			var userId int
 			err := rows.Scan(&average, &fname, &lname, &username, &userId)
 			if err != nil {
-				Log.Printf("Error while scanning average: %v", err)
+				Log.Errorf("Error while scanning average: %v", err)
 				return result, err
 			}
 
