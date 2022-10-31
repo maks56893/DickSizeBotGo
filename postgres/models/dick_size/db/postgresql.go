@@ -24,7 +24,6 @@ inner join postgres.public.user_data ud on d.winner = ud.user_id
 where d.chat_id = %d
 group by winner, ud.fname , ud.username , ud.lname 
 order by count(winner) desc 
-
 `
 
 	var result []map[string]string
@@ -41,7 +40,7 @@ order by count(winner) desc
 		for rows.Next() {
 			var fname, lname, username string
 			var winnerId, wins int
-			err := rows.Scan(&winnerId, &fname, &lname, &username, &wins)
+			err := rows.Scan(&winnerId, &fname, &username, &lname, &wins)
 			if err != nil {
 				Log.Printf("Error while scanning duels wins stat: %v", err)
 				return result
