@@ -3,6 +3,7 @@ package main
 import (
 	cash2 "DickSizeBot/cash"
 	"DickSizeBot/cash_domain"
+	"DickSizeBot/commands"
 	. "DickSizeBot/logger"
 	"DickSizeBot/pagination"
 	"DickSizeBot/postgres"
@@ -10,13 +11,13 @@ import (
 	"DickSizeBot/postgres/models/dick_size/db"
 	"DickSizeBot/utils"
 	"context"
-	"fmt"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 const (
@@ -27,15 +28,19 @@ const (
 	TodayCommand        = "/last_measures"
 	DuelCommand         = "/duel"
 	DuelStatsCommand    = "/stats"
+
+	WORKERS_PUll = 10
 )
 
-//var numericKeyboard = tgbotapi.NewReplyKeyboard(
+// var numericKeyboard = tgbotapi.NewReplyKeyboard(
+//
 //	tgbotapi.NewKeyboardButtonRow(
 //		tgbotapi.NewKeyboardButton(MeasureCommand),
 //		tgbotapi.NewKeyboardButton(AverageCommand),
 //		//		tgbotapi.NewKeyboardButton("3"),
 //	),
-//)
+//
+// )
 var removeKeyboard = tgbotapi.NewRemoveKeyboard(true)
 
 func main() {
@@ -222,58 +227,11 @@ func main() {
 					msg.ReplyToMessageID = update.Message.MessageID
 				}
 			case DuelCommand, DuelCommand + CommandToBot, DuelCommand + CommandToTestingBot:
-				if !(update.Message.Chat.IsGroup() || update.Message.Chat.IsSuperGroup()) {
-					msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Работает только в группе")
-					msg.ParseMode = "HTML"
-					msg.ReplyToMessageID = update.Message.MessageID
-					_, err := bot.Send(msg)
-					if err != nil {
-						Log.Printf(err.Error())
-					}
-					continue
-				}
 
-				if !utils.CheckLastUsersDuelIsToday(ctx, repo, update.Message.From.ID, update.Message.Chat.ID) {
-					userData := repo.GetAllCredentials(ctx, update.Message.Chat.ID)
-					for data := range userData {
-						fmt.Println(data)
-					}
-					var usersKeyboardButtons = tgbotapi.NewInlineKeyboardMarkup()
-					for _, userCred := range userData {
-						if userCred.UserId == update.Message.From.ID {
-							continue
-						}
+				command := commands.NewDuelCommandObj(ctx, client, bot)
+				msg = command.Execute(update)
+				cash.Set("duelCallerId", update.Message.From.ID, 10*time.Minute)
 
-						userId := "duel_user_id#" + strconv.Itoa(int(userCred.UserId))
-
-						buttonText := userCred.Fname + " @" + userCred.Username + " " + userCred.Lname
-
-						row := tgbotapi.NewInlineKeyboardRow(
-							tgbotapi.InlineKeyboardButton{
-								Text:         buttonText,
-								CallbackData: &userId,
-							},
-						)
-						usersKeyboardButtons = utils.AddRowToInlineKeyboard(&usersKeyboardButtons, row)
-					}
-
-					if _, ok := cash.Get("duelKeyboard"); ok {
-						Log.Infof("cash for duel keyboard already exists, deleting it...")
-						_ = cash.Del("duelKeyboard")
-					}
-					cash.Set("duelKeyboard", usersKeyboardButtons.InlineKeyboard, 10*time.Minute)
-
-					test := pagination.NewInlineKeyboardPaginator(1, "page#1", usersKeyboardButtons.InlineKeyboard)
-
-					msg = tgbotapi.NewMessage(update.Message.Chat.ID, "С кем хочешь помериться?")
-					msg.ReplyMarkup = test
-					msg.ParseMode = "HTML"
-					msg.ReplyToMessageID = update.Message.MessageID
-				} else {
-					msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Сегодня ты уже уменьшил чей-то пенис. Приходи завтра, чтобы ♂suck some dick♂")
-					msg.ParseMode = "HTML"
-					msg.ReplyToMessageID = update.Message.MessageID
-				}
 			case DuelStatsCommand, DuelStatsCommand + CommandToBot, DuelStatsCommand + CommandToTestingBot:
 				if update.Message.Chat.IsGroup() || update.Message.Chat.IsSuperGroup() {
 					duelsStat := repo.GetDuelsStat(ctx, update.Message.Chat.ID)
@@ -316,7 +274,6 @@ func main() {
 			if err != nil {
 				Log.Printf(err.Error())
 			}
-			//			msgToDel = message.MessageID
 			Log.Debugf("Sended message: %v", message)
 
 			//Обработка ввода ставки после callback и с данными к кеше
@@ -413,14 +370,40 @@ func main() {
 
 			callbackData := strings.Split(update.CallbackQuery.Data, "#")
 			if callbackData[0] == "duel_user_id" {
-				Log.Printf("test")
+				var msg tgbotapi.MessageConfig
+
+				//Обработка если кто то захочет перехватить дуэль
+				callerId, ok := cash.Get("duelCallerId")
+				if ok {
+					Log.Debugf("cash caller id: %d, update caller id: %d", callerId, update.CallbackQuery.From.ID)
+					if int(callerId.(int64)) != int(update.CallbackQuery.From.ID) {
+						msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Жулик, не воруй")
+						_, err := bot.Send(msg)
+						if err != nil {
+							Log.Printf(err.Error())
+						}
+						//снова выводим клавиатуру
+						duelKeyboardCommand := commands.NewDuelCommandObj(ctx, client, bot)
+						msg = duelKeyboardCommand.ExecuteFromCallback(update)
+						_, err = bot.Send(msg)
+						if err != nil {
+							Log.Printf(err.Error())
+						}
+						continue
+					}
+				}
+				if !cash.Del("duelCallerId") {
+					Log.Warnf("can't delete cash with key \"duelCallerId\"")
+				}
+
+				//TODO что это такое? возможно нужно чтобы callback засчитался
 				callback := tgbotapi.NewCallback(update.CallbackQuery.ID, "duel callback")
 
 				if _, err := bot.Request(callback); err != nil {
 					Log.Errorf("Error while exec remove msg request: %v", err)
 				}
 
-				msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Сколько сантиметров хочешь поставить? Введи число от 1 до 5. Если передумал, то введи \"саси\"")
+				msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Сколько сантиметров хочешь поставить? Введи число от 1 до 5. Если передумал, то введи \"саси\"")
 				if _, err := bot.Send(msg); err != nil {
 					Log.Errorf("Error while sending msg after callback: %v", err)
 				}
