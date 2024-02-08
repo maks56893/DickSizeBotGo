@@ -64,12 +64,17 @@ func main() {
 
 	client, err := postgres.NewClient(ctx, 2, user, pass, host, "5432", database)
 	if err != nil {
-		Log.Println(err.Error())
+		Log.Fatalf(err.Error())
+		return
 	}
 
 	cash := cash2.NewCache()
 
-	repo := db.NewRepo(client)
+	repo, err := db.NewRepo(client)
+	if err != nil {
+		Log.Fatalf("Failed to create repo: %v", err)
+		return
+	}
 
 	bot.Debug = true
 	Log.Printf("Authorized on account %s", bot.Self.UserName)

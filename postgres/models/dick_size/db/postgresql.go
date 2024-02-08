@@ -468,9 +468,12 @@ func initRepo(client postgres.Client) error {
 	return nil
 }
 
-func NewRepo(client postgres.Client) models.Repository {
-	initRepo(client)
+func NewRepo(client postgres.Client) (models.Repository, error) {
+	err := initRepo(client)
+	if err != nil {
+		return nil, err
+	}
 	return &repo{
 		client: client,
-	}
+	}, nil
 }
