@@ -2,7 +2,6 @@ package main
 
 import (
 	cash2 "DickSizeBot/cash"
-	"DickSizeBot/cash_domain"
 	"DickSizeBot/commands"
 	. "DickSizeBot/logger"
 	"DickSizeBot/pagination"
@@ -68,7 +67,7 @@ func main() {
 		Log.Println(err.Error())
 	}
 
-	cash := cash2.NewCash().(cash_domain.ICash)
+	cash := cash2.NewCache()
 
 	repo := db.NewRepo(client)
 
@@ -91,11 +90,9 @@ func main() {
 						log.Printf("Database was cleared at: %v", time.Now())
 						weekCount = 0
 					}
-
 				}
 			}
 		}
-
 	}()
 
 	//	var msgToDel int
@@ -335,12 +332,12 @@ func main() {
 					msg = tgbotapi.NewMessage(update.Message.Chat.ID, msgText)
 
 					key := "duel_" + strconv.Itoa(int(update.Message.From.ID))
-					cash.Del(key)
+					cash.Delete(key)
 				} else if findCancel {
 
 					//Просто удаляем кеш, так как получили команду отмены
 					key := "duel_" + strconv.Itoa(int(update.Message.From.ID))
-					cash.Del(key)
+					cash.Delete(key)
 				} else {
 					msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Давай попробуем ввести число от 1 до 5 ещё раз :)")
 					inputAttempts++
@@ -392,7 +389,7 @@ func main() {
 						continue
 					}
 				}
-				if !cash.Del("duelCallerId") {
+				if !cash.Delete("duelCallerId") {
 					Log.Warnf("can't delete cash with key \"duelCallerId\"")
 				}
 
@@ -448,7 +445,7 @@ func main() {
 					continue
 				}
 
-				deletedKeys := cash.DelAll()
+				deletedKeys := cash.DeleteAll()
 				Log.Infof("delete all cash keys: %v", deletedKeys)
 				continue
 			}

@@ -28,7 +28,7 @@ func NewDuelCommandObj(ctx context.Context, client *pgxpool.Pool, bot *tgbotapi.
 	return DuelCommandObj{
 		ctx: ctx,
 		repo: db.NewRepo(client),
-		cash: cash2.NewCash().(cash_domain.ICash),
+		cash: cash2.NewCache().(cash_domain.ICash),
 		Bot: bot,
 	}
 }

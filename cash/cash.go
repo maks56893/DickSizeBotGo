@@ -1,128 +1,133 @@
-package cash
+package cache
 
 import (
 	"sync"
 	"time"
 )
 
+// Cache представляет интерфейс для работы с кешем.
+type Cache interface {
+	Set(key string, value interface{}, duration time.Duration) // Задает значение по ключу с указанной продолжительностью действия.
+	Get(key string) (interface{}, bool)                        // Возвращает значение по ключу и флаг, указывающий на его наличие.
+	Delete(key string) bool                                    // Удаляет значение по ключу и возвращает флаг, указывающий на успех операции.
+	DeleteAll() []string                                       // Удаляет все значения из кеша и возвращает список удаленных ключей.
+	Count() int                                                // Возвращает количество элементов в кеше.
+}
+
 type item struct {
-	value      interface{}
-	created    time.Time
-	expiration int64
+	value   interface{} // Значение элемента.
+	created time.Time   // Время создания элемента.
 }
 
-type cash struct {
-	sync.RWMutex
-	defaultExpiration time.Duration
-	items             map[string]item
+type cache struct {
+	sync.RWMutex                      // Используется для блокировки доступа к кешу.
+	defaultExpiration time.Duration   // Продолжительность действия элемента по умолчанию.
+	items             map[string]item // Мапа для хранения элементов кеша.
 }
 
-var singleCash *cash
-
-// Создание объекта
-func NewCash() interface{} {
-	if singleCash == nil {
-		singleCash = &cash{
-			defaultExpiration: 1 * time.Second,
-			items:             make(map[string]item),
-		}
+// NewCache создает и возвращает новый экземпляр Cache.
+func NewCache() Cache {
+	c := &cache{
+		defaultExpiration: 1 * time.Second,
+		items:             make(map[string]item),
 	}
 
-	return singleCash
+	go c.startCleanupExpiredItems() // Запуск горутины для регулярной очистки истекших элементов.
+
+	return c
 }
 
-// func (obj *cash) Building(f factory.IFactory, data map[string]interface{}) interface{} {
-// 	return obj
-// }
-
-func (obj *cash) DelAll() []string {
-	var deletedKeys = make([]string, 0, 10)
-
-	for key, _ := range obj.items {
-		_ = obj.Del(key)
-		deletedKeys = append(deletedKeys, key)
-	}
-
-	return deletedKeys
-}
-
-func (obj *cash) Del(key string) bool {
-	obj.RLock()
-	defer obj.RUnlock()
-
-	_, found := obj.items[key]
-	if !found {
-		return false
-	}
-
-	delete(obj.items, key)
-	return true
-}
-
-// Установка значения в кеш duration = 1 * time.Second
-func (obj *cash) Set(key string, value interface{}, duration time.Duration) {
-
-	var expiration int64
+// Set задает значение по ключу с указанной продолжительностью действия.
+func (c *cache) Set(key string, value interface{}, duration time.Duration) {
+	c.Lock()
+	defer c.Unlock()
 
 	if duration == 0 {
-		duration = obj.defaultExpiration
+		duration = c.defaultExpiration
 	}
 
-	// Устанавливаем время истечения кеша
-	if duration > 0 {
-		expiration = time.Now().Add(duration).UnixNano()
-	}
-
-	obj.Lock()
-
-	defer obj.Unlock()
-
-	obj.items[key] = item{
-		value:      value,
-		expiration: expiration,
-		created:    time.Now(),
-	}
-
-	// Ищем элементы с истекшим временем жизни и удаляем из хранилища
-	for k, i := range obj.items {
-		if time.Now().UnixNano() > i.expiration && i.expiration > 0 {
-			delete(obj.items, k)
-		}
+	expiration := time.Now().Add(duration)
+	c.items[key] = item{
+		value:   value,
+		created: expiration,
 	}
 }
 
-// Получение значения из кеша
-func (obj *cash) Get(key string) (interface{}, bool) {
+// Get возвращает значение по ключу и флаг, указывающий на его наличие.
+func (c *cache) Get(key string) (interface{}, bool) {
+	c.RLock()
+	defer c.RUnlock()
 
-	obj.RLock()
-
-	defer obj.RUnlock()
-
-	item, found := obj.items[key]
-
-	// ключ не найден
-	if !found {
+	item, found := c.items[key]
+	if !found || c.isExpired(item) {
 		return nil, false
-	}
-
-	if item.expiration > 0 {
-
-		// Если в момент запроса кеш устарел возвращаем nil
-		if time.Now().UnixNano() > item.expiration {
-			return nil, false
-		}
-
 	}
 
 	return item.value, true
 }
 
-// Получение кол-ва элементов в кеше
-func (obj *cash) Count() int {
+// Delete удаляет значение по ключу и возвращает флаг, указывающий на успех операции.
+func (c *cache) Delete(key string) bool {
+	c.Lock()
+	defer c.Unlock()
 
-	obj.RLock()
+	_, found := c.items[key]
+	if !found {
+		return false
+	}
 
-	defer obj.RUnlock()
+	delete(c.items, key)
+	return true
+}
 
-	return len(obj.items)
+// DeleteAll удаляет все значения из кеша и возвращает список удаленных ключей.
+func (c *cache) DeleteAll() []string {
+	c.Lock()
+	defer c.Unlock()
+
+	deletedKeys := make([]string, 0, len(c.items))
+	for key := range c.items {
+		deletedKeys = append(deletedKeys, key)
+		delete(c.items, key)
+	}
+
+	return deletedKeys
+}
+
+// Count возвращает количество элементов в кеше.
+func (c *cache) Count() int {
+	c.RLock()
+	defer c.RUnlock()
+
+	return len(c.items)
+}
+
+// startCleanupExpiredItems запускает горутину для регулярной очистки истекших элементов.
+func (c *cache) startCleanupExpiredItems() {
+	ticker := time.NewTicker(c.defaultExpiration)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C: // Ожидание истечения времени.
+			c.cleanupExpiredItems()
+		}
+	}
+}
+
+// cleanupExpiredItems удаляет истекшие элементы из кеша.
+func (c *cache) cleanupExpiredItems() {
+	c.Lock()
+	defer c.Unlock()
+
+	for key, item := range c.items {
+		if c.isExpired(item) {
+			delete(c.items, key)
+		}
+	}
+}
+
+// isExpired проверяет, истек ли срок действия элемента.
+func (c *cache) isExpired(item item) bool {
+	return item.created.Before(time.Now())
 }
