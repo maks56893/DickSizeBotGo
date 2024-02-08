@@ -414,7 +414,62 @@ func (r *repo) GetUserAllSizesByChatId(ctx context.Context, chatId int64) ([]map
 	return result, nil
 }
 
+func initRepo(client postgres.Client) error {
+	userDataTableInitQuery := `
+	CREATE is not exists table duels (
+		caller_user_id INT NOT null PRIMARY KEY,
+		called_user_id int not null,
+		chat_id bigint not null,
+		bet int not null,
+		winner int
+	);
+	`
+	_, err := client.Exec(context.TODO(), userDataTableInitQuery)
+	if err != nil {
+		return err
+	}
+
+	DuelsTableInitQuery := `
+	CREATE is not exists table duels (
+		duel_id SERIAL PRIMARY key,
+		caller_user_id INT NOT null,
+		caller_roll	 int not null,
+		called_user_id int not null,
+		called_roll int not null,
+		chat_id bigint not null,
+		bet int not null,
+		winner int,
+		duel_time TIMESTAMP
+	);
+	`
+	_, err = client.Exec(context.TODO(), DuelsTableInitQuery)
+	if err != nil {
+		return err
+	}
+
+	BotTableTableInitQuery := `
+	CREATE is not exists table dick_size (
+		id SERIAL  PRIMARY KEY,
+		user_id INT NOT NULL,
+		fname VARCHAR(50),
+		lname VARCHAR(50),
+		username VARCHAR(50),
+		dick_size BIGINT,
+		measure_date TIMESTAMP,
+		chat_id BIGINT,
+		is_group BOOL
+	);
+	`
+	_, err = client.Exec(context.TODO(), BotTableTableInitQuery)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func NewRepo(client postgres.Client) models.Repository {
+	initRepo(client)
 	return &repo{
 		client: client,
 	}

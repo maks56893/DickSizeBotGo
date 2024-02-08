@@ -12,6 +12,9 @@ import (
 )
 
 type Client interface {
+	// Exec acquires a connection from the Pool and executes the given SQL. SQL can be either a prepared statement name or an SQL string.
+	// Arguments should be referenced positionally from the SQL string as $1, $2, etc.
+	// The acquired connection is returned to the pool when the Exec function returns.
 	Exec(ctx context.Context, sql string, arguments ...interface{}) (pgconn.CommandTag, error)
 	Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
 	QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row
