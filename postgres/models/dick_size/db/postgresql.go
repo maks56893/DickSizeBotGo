@@ -416,7 +416,7 @@ func (r *repo) GetUserAllSizesByChatId(ctx context.Context, chatId int64) ([]map
 
 func initRepo(client postgres.Client) error {
 	userDataTableInitQuery := `
-	CREATE TABLE public.user_data (
+	CREATE TABLE if not exists public.user_data (
 		user_id int4 NOT NULL,
 		fname varchar(100) NULL,
 		lname varchar(100) NULL,
