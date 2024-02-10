@@ -416,7 +416,7 @@ func (r *repo) GetUserAllSizesByChatId(ctx context.Context, chatId int64) ([]map
 
 func initRepo(client postgres.Client) error {
 	userDataTableInitQuery := `
-	CREATE is not exists table duels (
+	CREATE if not exists table duels (
 		caller_user_id INT NOT null PRIMARY KEY,
 		called_user_id int not null,
 		chat_id bigint not null,
@@ -430,7 +430,7 @@ func initRepo(client postgres.Client) error {
 	}
 
 	DuelsTableInitQuery := `
-	CREATE is not exists table duels (
+	CREATE if not exists table duels (
 		duel_id SERIAL PRIMARY key,
 		caller_user_id INT NOT null,
 		caller_roll	 int not null,
@@ -448,7 +448,7 @@ func initRepo(client postgres.Client) error {
 	}
 
 	BotTableTableInitQuery := `
-	CREATE is not exists table dick_size (
+	CREATE if not exists table dick_size (
 		id SERIAL  PRIMARY KEY,
 		user_id INT NOT NULL,
 		fname VARCHAR(50),
