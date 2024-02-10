@@ -104,7 +104,6 @@ func main() {
 	inputAttempts := 0
 
 	for update := range updates {
-
 		var msg tgbotapi.MessageConfig
 
 		var duelDataFromCallback interface{}
@@ -116,7 +115,6 @@ func main() {
 		}
 
 		if update.Message != nil && !hasCash { // If we got a message
-
 			switch update.Message.Text {
 			case MeasureCommand, MeasureCommand + CommandToBot, MeasureCommand + CommandToTestingBot:
 
@@ -230,7 +228,7 @@ func main() {
 				}
 			case DuelCommand, DuelCommand + CommandToBot, DuelCommand + CommandToTestingBot:
 
-				command := commands.NewDuelCommandObj(ctx, client, bot)
+				command := commands.NewDuelCommandObj(ctx, repo, bot)
 				msg = command.Execute(update)
 				cash.Set("duelCallerId", update.Message.From.ID, 10*time.Minute)
 
@@ -385,7 +383,7 @@ func main() {
 							Log.Printf(err.Error())
 						}
 						//снова выводим клавиатуру
-						duelKeyboardCommand := commands.NewDuelCommandObj(ctx, client, bot)
+						duelKeyboardCommand := commands.NewDuelCommandObj(ctx, repo, bot)
 						msg = duelKeyboardCommand.ExecuteFromCallback(update)
 						_, err = bot.Send(msg)
 						if err != nil {

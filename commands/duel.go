@@ -5,31 +5,29 @@ import (
 	"strconv"
 	"time"
 
-	"DickSizeBot/postgres/models/dick_size/db"
-	. "DickSizeBot/logger"
-	models "DickSizeBot/postgres/models/dick_size"
-	"DickSizeBot/cash_domain"
-	"DickSizeBot/pagination"
-	"DickSizeBot/utils"
 	cash2 "DickSizeBot/cash"
+	"DickSizeBot/cash_domain"
+	. "DickSizeBot/logger"
+	"DickSizeBot/pagination"
+	models "DickSizeBot/postgres/models/dick_size"
+	"DickSizeBot/utils"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 type DuelCommandObj struct {
-	ctx context.Context
+	ctx  context.Context
 	repo models.Repository
 	cash cash_domain.ICash
 	Bot  *tgbotapi.BotAPI
 }
 
-func NewDuelCommandObj(ctx context.Context, client *pgxpool.Pool, bot *tgbotapi.BotAPI) DuelCommandObj {
+func NewDuelCommandObj(ctx context.Context, repo models.Repository, bot *tgbotapi.BotAPI) DuelCommandObj {
 	return DuelCommandObj{
-		ctx: ctx,
-		repo: db.NewRepo(client),
+		ctx:  ctx,
+		repo: repo,
 		cash: cash2.NewCache().(cash_domain.ICash),
-		Bot: bot,
+		Bot:  bot,
 	}
 }
 
@@ -42,7 +40,7 @@ func (cmd *DuelCommandObj) Execute(update tgbotapi.Update) (msg tgbotapi.Message
 		// if err != nil {
 		// 	Log.Printf(err.Error())
 		// }
-		return 
+		return
 	}
 
 	if !utils.CheckLastUsersDuelIsToday(cmd.ctx, cmd.repo, update.Message.From.ID, update.Message.Chat.ID) {
@@ -93,7 +91,7 @@ func (cmd *DuelCommandObj) ExecuteFromCallback(update tgbotapi.Update) (msg tgbo
 		// if err != nil {
 		// 	Log.Printf(err.Error())
 		// }
-		return 
+		return
 	}
 
 	if !utils.CheckLastUsersDuelIsToday(cmd.ctx, cmd.repo, update.CallbackQuery.Message.From.ID, update.CallbackQuery.Message.Chat.ID) {
@@ -129,7 +127,7 @@ func (cmd *DuelCommandObj) ExecuteFromCallback(update tgbotapi.Update) (msg tgbo
 		msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "С кем хочешь помериться?")
 		msg.ReplyMarkup = test
 		msg.ParseMode = "HTML"
-//		msg.ReplyToMessageID = update.CallbackQuery.Message.MessageID
+		//		msg.ReplyToMessageID = update.CallbackQuery.Message.MessageID
 	}
 
 	return
