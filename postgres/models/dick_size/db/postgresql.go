@@ -415,19 +415,20 @@ func (r *repo) GetUserAllSizesByChatId(ctx context.Context, chatId int64) ([]map
 }
 
 func initRepo(client postgres.Client) error {
-/* 	userDataTableInitQuery := `
-	CREATE TABLE if not exists user_data (
-		caller_user_id INT NOT null PRIMARY KEY,
-		called_user_id int not null,
-		chat_id bigint not null,
-		bet int not null,
-		winner int
+	userDataTableInitQuery := `
+	CREATE TABLE public.user_data (
+		user_id int4 NOT NULL,
+		fname varchar(100) NULL,
+		lname varchar(100) NULL,
+		username varchar(100) NULL,
+		chat_id int8 NULL,
+		CONSTRAINT user_data_pkey PRIMARY KEY (user_id)
 	);
 	`
 	_, err := client.Exec(context.TODO(), userDataTableInitQuery)
 	if err != nil {
 		return err
-	} */
+	}
 
 	DuelsTableInitQuery := `
 	CREATE table if not exists duels (
@@ -442,7 +443,7 @@ func initRepo(client postgres.Client) error {
 		duel_time TIMESTAMP
 	);
 	`
-	_, err := client.Exec(context.TODO(), DuelsTableInitQuery)
+	_, err = client.Exec(context.TODO(), DuelsTableInitQuery)
 	if err != nil {
 		return err
 	}
