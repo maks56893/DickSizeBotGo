@@ -101,7 +101,7 @@ func GetRandMeasureReplyPattern(dickSize int) string {
 	return res
 }
 
-func GetRandAverageRepltText() string {
+func GetRandAverageReplyText() string {
 	rand.Seed(time.Now().UnixNano())
 	return listAverage[rand.Intn(len(listAverage))]
 }

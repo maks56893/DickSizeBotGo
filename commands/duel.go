@@ -6,7 +6,6 @@ import (
 	"time"
 
 	cash2 "DickSizeBot/cash"
-	"DickSizeBot/cash_domain"
 	. "DickSizeBot/logger"
 	"DickSizeBot/pagination"
 	models "DickSizeBot/postgres/models/dick_size"
@@ -18,7 +17,7 @@ import (
 type DuelCommandObj struct {
 	ctx  context.Context
 	repo models.Repository
-	cash cash_domain.ICash
+	cash cash2.Cache
 	Bot  *tgbotapi.BotAPI
 }
 
@@ -26,7 +25,7 @@ func NewDuelCommandObj(ctx context.Context, repo models.Repository, bot *tgbotap
 	return DuelCommandObj{
 		ctx:  ctx,
 		repo: repo,
-		cash: cash2.NewCache().(cash_domain.ICash),
+		cash: cash2.NewCache(),
 		Bot:  bot,
 	}
 }
@@ -67,14 +66,18 @@ func (cmd *DuelCommandObj) Execute(update tgbotapi.Update) (msg tgbotapi.Message
 
 		if _, ok := cmd.cash.Get("duelKeyboard"); ok {
 			Log.Infof("cash for duel keyboard already exists, deleting it...")
-			_ = cmd.cash.Del("duelKeyboard")
+			_ = cmd.cash.Delete("duelKeyboard")
 		}
 		cmd.cash.Set("duelKeyboard", usersKeyboardButtons.InlineKeyboard, 10*time.Minute)
 
-		test := pagination.NewInlineKeyboardPaginator(1, "page#1", usersKeyboardButtons.InlineKeyboard)
+		keyboardWithUsers := pagination.NewInlineKeyboardPaginator(1, "page#1", usersKeyboardButtons.InlineKeyboard)
+		if keyboardWithUsers == nil {
+			// в чате только один человек, дуэль не возможна
+			return tgbotapi.NewMessage(update.Message.Chat.ID, "В чате член есть только у тебя, дуэль не возможна")
+		}
 
 		msg = tgbotapi.NewMessage(update.Message.Chat.ID, "С кем хочешь помериться?")
-		msg.ReplyMarkup = test
+		msg.ReplyMarkup = keyboardWithUsers
 		msg.ParseMode = "HTML"
 		msg.ReplyToMessageID = update.Message.MessageID
 	}

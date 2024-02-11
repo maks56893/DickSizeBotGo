@@ -25,7 +25,7 @@ const (
 	MeasureCommand      = "/check_size"
 	AverageCommand      = "/get_average"
 	TodayCommand        = "/last_measures"
-	DuelCommand         = "/duel12324556564564"
+	DuelCommand         = "/duel"
 	DuelStatsCommand    = "/stats"
 
 	WORKERS_PUll = 10
@@ -142,7 +142,7 @@ func main() {
 				if update.Message.Chat.IsGroup() || update.Message.Chat.IsSuperGroup() {
 					chatAverages, _ := repo.GetUserAllSizesByChatId(ctx, update.Message.Chat.ID)
 
-					msgText := GetRandAverageRepltText()
+					msgText := GetRandAverageReplyText()
 
 					for _, userData := range chatAverages {
 						if fname, ok := userData["fname"]; ok {
@@ -272,7 +272,7 @@ func main() {
 			}
 			message, err := bot.Send(msg)
 			if err != nil {
-				Log.Printf(err.Error())
+				Log.Errorf(err.Error())
 			}
 			Log.Debugf("Sended message: %v", message)
 
