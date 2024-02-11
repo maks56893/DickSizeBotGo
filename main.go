@@ -25,7 +25,7 @@ const (
 	MeasureCommand      = "/check_size"
 	AverageCommand      = "/get_average"
 	TodayCommand        = "/last_measures"
-	DuelCommand         = "/duel123123"
+	DuelCommand         = "/duel"
 	DuelStatsCommand    = "/stats"
 
 	WORKERS_PUll = 10

@@ -71,15 +71,11 @@ func (cmd *DuelCommandObj) Execute(update tgbotapi.Update) (msg tgbotapi.Message
 		cmd.cash.Set("duelKeyboard", usersKeyboardButtons.InlineKeyboard, 10*time.Minute)
 
 		keyboardWithUsers := pagination.NewInlineKeyboardPaginator(1, "page#1", usersKeyboardButtons.InlineKeyboard)
-		if keyboardWithUsers == nil {
-			// в чате только один человек, дуэль не возможна
-			return tgbotapi.NewMessage(update.Message.Chat.ID, "В чате член есть только у тебя, дуэль не возможна")
-		}
 
 		msg = tgbotapi.NewMessage(update.Message.Chat.ID, "С кем хочешь помериться?")
-		msg.ReplyMarkup = keyboardWithUsers
-		msg.ParseMode = "HTML"
 		msg.ReplyToMessageID = update.Message.MessageID
+		msg.ParseMode = "HTML"
+		msg.ReplyMarkup = keyboardWithUsers
 	}
 
 	return

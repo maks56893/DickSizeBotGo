@@ -71,26 +71,25 @@ func (p *InlineKeyboardPaginator) buttons() [][]tgbotapi.InlineKeyboardButton {
 	var resultKeyboard [][]tgbotapi.InlineKeyboardButton
 
 	if p.totalPages == 1 {
-		return nil
+		resultKeyboard = p.noPagesKeyboard()
 	} else if p.totalPages <= 5 {
 		resultKeyboard = p.lessKeyboard()
-		return append(resultKeyboard, cancelButton)
 	} else if p.page <= 3 {
 		resultKeyboard = p.startKeyboard()
-		return append(resultKeyboard, cancelButton)
 	} else if p.page > p.totalPages-3 {
 		resultKeyboard = p.finishKeyboard()
-		return append(resultKeyboard, cancelButton)
 	} else {
 		resultKeyboard = p.middleKeyboard()
-		return append(resultKeyboard, cancelButton)
 	}
+	return append(resultKeyboard, cancelButton)
 }
 
 func (p *InlineKeyboardPaginator) listKeyboardForCurrentPage() [][]tgbotapi.InlineKeyboardButton {
 	var currentKeyboard [][]tgbotapi.InlineKeyboardButton
 
-	if p.page == 1 {
+	if p.page == 1 && p.totalPages == 1 {
+		currentKeyboard = p.allUsersKeyboard
+	} else if p.page == 1 {
 		for _, row := range p.allUsersKeyboard[:(p.page * maxUsersPerPage)] {
 			currentKeyboard = append(currentKeyboard, row)
 		}
@@ -109,14 +108,17 @@ func (p *InlineKeyboardPaginator) listKeyboardForCurrentPage() [][]tgbotapi.Inli
 	return currentKeyboard
 }
 
+func (p *InlineKeyboardPaginator) noPagesKeyboard() [][]tgbotapi.InlineKeyboardButton {
+	return p.listKeyboardForCurrentPage()
+}
+
 func (p *InlineKeyboardPaginator) lessKeyboard() [][]tgbotapi.InlineKeyboardButton {
 	keyboardDict := make([]tgbotapi.InlineKeyboardButton, 0, p.totalPages)
 	for page := 1; page <= p.totalPages; page++ {
 		keyboardDict = append(keyboardDict, p.isCurrentKeyboard(page))
 	}
 
-	currentKeyboard := make([][]tgbotapi.InlineKeyboardButton, 0, 12)
-	currentKeyboard = p.listKeyboardForCurrentPage()
+	currentKeyboard := p.listKeyboardForCurrentPage()
 
 	currentKeyboard = append(currentKeyboard, keyboardDict)
 	return currentKeyboard
